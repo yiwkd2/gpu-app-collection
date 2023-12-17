@@ -6,15 +6,11 @@
 #include "backprop.h"
 //#include "omp.h"
 
-extern char *strcpy();
-extern void exit();
-
 int layer_size = 0;
 
-backprop_face()
+void backprop_face()
 {
   BPNN *net;
-  int i;
   float out_err, hid_err;
   net = bpnn_create(layer_size, 16, 1); // (16, 1 can not be changed)
   
@@ -26,17 +22,16 @@ backprop_face()
   bpnn_free(net);
   printf("Training done\n");
 }
+
 const char* goldfile;
-int setup(argc, argv)
-int argc;
-char *argv[];
+
+int setup(int argc, char *argv[])
 {
-	
   int seed;
 
-  if (argc<2){
-  fprintf(stderr, "usage: backprop <num of input elements>\n");
-  exit(0);
+  if (argc < 2){
+    fprintf(stderr, "usage: backprop <num of input elements>\n");
+    exit(0);
   }
   layer_size = atoi(argv[1]);
   if (layer_size%16!=0){

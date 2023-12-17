@@ -35,19 +35,57 @@ typedef struct {
   float **hidden_prev_weights; /* previous change on hidden to output wgt */
 } BPNN;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+int setup(int argc, char** argv);
+#ifdef __cplusplus
+}
+#endif
 
 /*** User-level functions ***/
 
-void bpnn_initialize();
+void backprop_face(void);
 
-BPNN *bpnn_create();
-void bpnn_free();
+void bpnn_initialize(int seed);
 
-void bpnn_train();
-void bpnn_feedforward();
+BPNN *bpnn_create(int layer_size, int n_hidden, int n_out);
+void bpnn_free(BPNN* net);
 
-void bpnn_save();
-BPNN *bpnn_read();
+void bpnn_train(BPNN* net, float* eo, float* eh);
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+void bpnn_train_cuda(BPNN* net, float* eo, float* eh);
+#ifdef __cplusplus
+}
+#endif
+void bpnn_feedforward(BPNN* net);
+
+void bpnn_save(BPNN* net, char* filename);
+//BPNN *bpnn_read(char* filename);
+
+void load(BPNN* net);
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+float squash(float x);
+float* alloc_1d_dbl(int n);
+float** alloc_2d_dbl(int m, int n);
+void bpnn_randomize_weights(float** w, int m, int n);
+void bpnn_randomize_row(float* w, int m);
+void bpnn_zero_weights(float** w, int m, int n);
+BPNN* bpnn_internal_create(int n_in, int n_hidden, int n_out);
+void bpnn_layerforward(float* l1, float* l2, float** conn, int n1, int n2);
+void bpnn_output_error(float* delta, float* target, float* output, int nj, float* err);
+void bpnn_hidden_error(float* delta_h, int nh, float* delta_o, int no,
+        float** who, float* hidden, float* err);
+void bpnn_adjust_weights(float *delta, int ndelta, float *ly, int nly,
+        float **w, float **oldw);
+#ifdef __cplusplus
+}
+#endif
 
 #endif

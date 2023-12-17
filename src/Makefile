@@ -65,6 +65,10 @@ rodinia_2.0-ft:
 	$(SETENV) make $(MAKE_ARGS) -C cuda/rodinia/2.0-ft/srad
 	$(SETENV) make $(MAKE_ARGS) -C cuda/rodinia/2.0-ft/streamcluster
 
+rodinia_2.0-ft-backprop:
+	$(SETENV) make $(MAKE_ARGS) -C cuda/rodinia/2.0-ft/backprop
+
+
 ###################################################################################################3
 # Purdue microbenchmarks for added functionality
 ###################################################################################################3
@@ -591,6 +595,9 @@ clean_rodinia_2.0-ft:
 	$(SETENV) make $(MAKE_ARGS) clean -C cuda/rodinia/2.0-ft/pathfinder
 	$(SETENV) make $(MAKE_ARGS) clean -C cuda/rodinia/2.0-ft/srad
 	$(SETENV) make $(MAKE_ARGS) clean -C cuda/rodinia/2.0-ft/streamcluster
+
+clean_rodinia_2.0-ft-backprop:
+	$(SETENV) make $(MAKE_ARGS) clean -C cuda/rodinia/2.0-ft/backprop
 
 clean_cuda_samples_hw_power:
 	$(SETENV) make clean $(MAKE_ARGS) noinline=$(noinline) -C cuda/NVIDIA_CUDA-11.0_Samples/binomialOptions_k1

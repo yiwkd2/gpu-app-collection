@@ -91,7 +91,6 @@ CXXWARN_FLAGS := \
 	-Wpointer-arith \
 	-Wcast-align \
 	-Wreturn-type \
-	-Wno-unused-function \
 	$(SPACE)
 
 CWARN_FLAGS := $(CXXWARN_FLAGS) \
