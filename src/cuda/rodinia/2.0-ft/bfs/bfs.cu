@@ -95,10 +95,22 @@ void BFSGraph( int argc, char** argv)
 	}
 
 	// allocate host memory
+    /*
 	Node* h_graph_nodes = (Node*) malloc(sizeof(Node)*no_of_nodes);
 	bool *h_graph_mask = (bool*) malloc(sizeof(bool)*no_of_nodes);
 	bool *h_updating_graph_mask = (bool*) malloc(sizeof(bool)*no_of_nodes);
 	bool *h_graph_visited = (bool*) malloc(sizeof(bool)*no_of_nodes);
+    */
+
+    Node* h_graph_nodes;
+    bool* h_graph_mask;
+    bool* h_updating_graph_mask;
+    bool* h_graph_visited;
+
+    cudaMallocHost((void**) &h_graph_nodes, no_of_nodes * sizeof(Node));
+    cudaMallocHost((void**) &h_graph_mask, no_of_nodes * sizeof(bool));
+    cudaMallocHost((void**) &h_updating_graph_mask, no_of_nodes * sizeof(bool));
+    cudaMallocHost((void**) &h_graph_visited, no_of_nodes * sizeof(bool));
 
 	int start, edgeno;   
 	// initalize the memory
@@ -123,7 +135,9 @@ void BFSGraph( int argc, char** argv)
 	fscanf(fp,"%d",&edge_list_size);
 
 	int id,cost;
-	int* h_graph_edges = (int*) malloc(sizeof(int)*edge_list_size);
+	//int* h_graph_edges = (int*) malloc(sizeof(int)*edge_list_size);
+    int* h_graph_edges;
+    cudaMallocHost((void**) &h_graph_edges, edge_list_size * sizeof(int));
 	for(int i=0; i < edge_list_size ; i++)
 	{
 		fscanf(fp,"%d",&id);
@@ -161,7 +175,9 @@ void BFSGraph( int argc, char** argv)
 	cudaMemcpy( d_graph_visited, h_graph_visited, sizeof(bool)*no_of_nodes, cudaMemcpyHostToDevice) ;
 
 	// allocate mem for the result on host side
-	int* h_cost = (int*) malloc( sizeof(int)*no_of_nodes);
+	//int* h_cost = (int*) malloc( sizeof(int)*no_of_nodes);
+    int* h_cost;
+    cudaMallocHost((void**) &h_cost, no_of_nodes * sizeof(int));
 	for(int i=0;i<no_of_nodes;i++)
 		h_cost[i]=-1;
 	h_cost[source]=0;
@@ -183,13 +199,15 @@ void BFSGraph( int argc, char** argv)
 
 	int k=0;
 
-	bool stop;
+	//bool stop;
+    bool* stop;
+    cudaMallocHost((void**) &stop, sizeof(bool));
 	//Call the Kernel untill all the elements of Frontier are not false
 	do
 	{
 		//if no thread changes this value then the loop stops
-		stop=false;
-		cudaMemcpy( d_over, &stop, sizeof(bool), cudaMemcpyHostToDevice) ;
+		*stop = false;
+		cudaMemcpy( d_over, stop, sizeof(bool), cudaMemcpyHostToDevice) ;
 		Kernel<<< grid, threads, 0 >>>( d_graph_nodes, d_graph_edges, d_graph_mask, d_updating_graph_mask, d_graph_visited, d_cost, no_of_nodes);
 		// check if kernel execution generated and error
 		
@@ -198,10 +216,10 @@ void BFSGraph( int argc, char** argv)
 		// check if kernel execution generated and error
 		
 
-		cudaMemcpy( &stop, d_over, sizeof(bool), cudaMemcpyDeviceToHost) ;
+		cudaMemcpy( stop, d_over, sizeof(bool), cudaMemcpyDeviceToHost) ;
 		k++;
 	}
-	while(stop);
+	while(*stop);
 
 
 	printf("Kernel Executed %d times\n",k);
