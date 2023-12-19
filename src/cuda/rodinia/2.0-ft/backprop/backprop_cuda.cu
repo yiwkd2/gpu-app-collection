@@ -45,7 +45,7 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   hid = net->hidden_n;
   out = net->output_n;   
    
-#ifdef GPU  
+#ifdef GPU
   int m = 0;
   float *input_hidden_cuda;
   float *input_cuda;
@@ -60,6 +60,20 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   num_blocks = in / 16;  
   dim3  grid( 1 , num_blocks);
   dim3  threads(16 , 16);
+
+  // [USIM] USIM requires to allocate host memory using cudaMallocHost
+  // So replace net->input_units and net->hidden_delta
+  float *tmp_input, *tmp_hidden_delta;
+  cudaMallocHost((void**) &tmp_input, (in + 1) * sizeof(float));
+  cudaMallocHost((void**) &tmp_hidden_delta, (hid + 1) * sizeof(float));
+  for (int i = 0; i < in + 1; i++) tmp_input[i] = net->input_units[i];
+  for (int i = 0; i < hid + 1; i++) tmp_hidden_delta[i] = net->hidden_delta[i];
+
+  free((char *) net->input_units);
+  free((char *) net->hidden_delta);
+  
+  net->input_units = tmp_input;
+  net->hidden_delta = tmp_hidden_delta;
   
   /*
   input_weights_one_dim = (float *) malloc((in + 1)* (hid + 1) * sizeof(float));
@@ -208,6 +222,18 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   cudaFreeHost(input_weights_one_dim);
   cudaFreeHost(input_weights_prev_one_dim);
 
-#endif   
+  // [USIM] replace net->input_units and net->hidden_delta again...
+  tmp_input = alloc_1d_dbl(in + 1);
+  tmp_hidden_delta = alloc_1d_dbl(hid + 1);
+  for (int i = 0; i < in + 1; i++) tmp_input[i] = net->input_units[i];
+  for (int i = 0; i < hid + 1; i++) tmp_hidden_delta[i] = net->hidden_delta[i];
+
+  cudaFreeHost(net->input_units);
+  cudaFreeHost(net->hidden_delta);
+
+  net->input_units = tmp_input;
+  net->hidden_delta = tmp_hidden_delta;
+
+#endif
 
 }
