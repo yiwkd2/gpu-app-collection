@@ -57,16 +57,13 @@ rodinia_2.0-ft:
 	$(SETENV) make $(MAKE_ARGS) -C cuda/rodinia/2.0-ft/bfs
 	$(SETENV) make $(MAKE_ARGS) -C cuda/rodinia/2.0-ft/heartwall
 	$(SETENV) make $(MAKE_ARGS) -C cuda/rodinia/2.0-ft/hotspot
-	$(SETENV) make $(MAKE_ARGS) -C cuda/rodinia/2.0-ft/kmeans
+	#$(SETENV) make $(MAKE_ARGS) -C cuda/rodinia/2.0-ft/kmeans
 	$(SETENV) make $(MAKE_ARGS) -C cuda/rodinia/2.0-ft/lud
 	$(SETENV) make $(MAKE_ARGS) -C cuda/rodinia/2.0-ft/nn
 	$(SETENV) make $(MAKE_ARGS) -C cuda/rodinia/2.0-ft/nw
 	$(SETENV) make $(MAKE_ARGS) -C cuda/rodinia/2.0-ft/pathfinder
 	$(SETENV) make $(MAKE_ARGS) -C cuda/rodinia/2.0-ft/srad
 	$(SETENV) make $(MAKE_ARGS) -C cuda/rodinia/2.0-ft/streamcluster
-
-rodinia_2.0-ft-backprop:
-	$(SETENV) make $(MAKE_ARGS) -C cuda/rodinia/2.0-ft/backprop
 
 
 ###################################################################################################3
