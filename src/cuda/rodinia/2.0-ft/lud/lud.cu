@@ -137,7 +137,8 @@ main ( int argc, char *argv[] )
     free(mm);
   }
 
-  free(m);
+  //free(m);
+  cudaFreeHost(m);
 
   return EXIT_SUCCESS;
 }				/* ----------  end of function main  ---------- */

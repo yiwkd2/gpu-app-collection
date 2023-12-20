@@ -31,13 +31,6 @@ void run(int argc, char** argv);
 #define pin_stats_dump(cycles)    printf("timer: %Lu\n", cycles)
 
 
-void 
-fatal(char *s)
-{
-	fprintf(stderr, "error: %s\n", s);
-
-}
-
 void writeoutput(float *vect, int grid_rows, int grid_cols, char *file){
 
 	int i,j, index=0;
@@ -77,10 +70,10 @@ void readinput(float *vect, int grid_rows, int grid_cols, char *file){
 	 {
 		fgets(str, STR_SIZE, fp);
 		if (feof(fp))
-			fatal("not enough lines in file");
+            fprintf(stderr, "error: not enough lines in file\n");
 		//if ((sscanf(str, "%d%f", &index, &val) != 2) || (index != ((i-1)*(grid_cols-2)+j-1)))
 		if ((sscanf(str, "%f", &val) != 1))
-			fatal("invalid file format");
+            fprintf(stderr, "error: invalid file format\n");
 		vect[i*grid_cols+j] = val;
 	}
 
@@ -246,29 +239,31 @@ void run(int argc, char** argv)
     int size;
     int grid_rows,grid_cols;
     float *FilesavingTemp,*FilesavingPower,*MatrixOut; 
+    char* tfile, *pfile, *ofile;
+    /*
     char tfile[]="./data/temp.dat";
     char pfile[]="./data/power.dat";
     char ofile[]="./output_pyramid.dat";
+    */
     const char* goldfile;
     int total_iterations = 60;
     int pyramid_height = 1; // number of iterations
-    if (argc >= 2)
-    {
-		grid_rows = atoi(argv[1]);
-		grid_cols = atoi(argv[1]);
-    }
-    if (argc >= 3){
+
+    if (argc > 8 || argc < 7) {
+        printf("Usage: ./exec row/col height iter temp_file "
+                "power_file output_file [gold_file]\n");
+        exit(0);
+    } else {
+        grid_rows = atoi(argv[1]);
+        grid_cols = atoi(argv[1]);
         pyramid_height = atoi(argv[2]);
-	}
-    if (argc >= 4) {
         total_iterations = atoi(argv[3]);
-	}
-	if (argc >= 5) {
-		goldfile = argv[4];
-	}
-    if (argc>=6) {
-		printf("Wrong Usage\n");
-		exit(0);
+        tfile = argv[4];
+        pfile = argv[5];
+        ofile = argv[6];
+
+        if (argc == 8) goldfile = argv[7];
+        else goldfile = nullptr;
     }
 
     size=grid_rows*grid_cols;
@@ -282,15 +277,23 @@ void run(int argc, char** argv)
     int blockCols = grid_cols/smallBlockCol+((grid_cols%smallBlockCol==0)?0:1);
     int blockRows = grid_rows/smallBlockRow+((grid_rows%smallBlockRow==0)?0:1);
 
+    /*
     FilesavingTemp = (float *) malloc(size*sizeof(float));
     FilesavingPower = (float *) malloc(size*sizeof(float));
     MatrixOut = (float *) calloc (size, sizeof(float));
+    */
 
-    if( !FilesavingPower || !FilesavingTemp || !MatrixOut)
-        fatal("unable to allocate memory");
+    cudaMallocHost((void**) &FilesavingTemp, size * sizeof(float));
+    cudaMallocHost((void**) &FilesavingPower, size * sizeof(float));
+    cudaMallocHost((void**) &MatrixOut, size * sizeof(float));
 
-    printf("pyramidHeight: %d\ngridSize: [%d, %d]\nborder:[%d, %d]\nblockGrid:[%d, %d]\ntargetBlock:[%d, %d]\n",\
-	pyramid_height, grid_cols, grid_rows, borderCols, borderRows, blockCols, blockRows, smallBlockCol, smallBlockRow);
+    if (!FilesavingPower || !FilesavingTemp || !MatrixOut)
+        fprintf(stderr, "error: unable to allocate memory\n");
+
+    printf("pyramidHeight: %d\ngridSize: [%d, %d]\nborder:[%d, %d]\n"
+            "blockGrid:[%d, %d]\ntargetBlock:[%d, %d]\n",
+            pyramid_height, grid_cols, grid_rows, borderCols, borderRows,
+            blockCols, blockRows, smallBlockCol, smallBlockRow);
 	
     readinput(FilesavingTemp, grid_rows, grid_cols, tfile);
     readinput(FilesavingPower, grid_rows, grid_cols, pfile);
@@ -304,19 +307,26 @@ void run(int argc, char** argv)
 
     unsigned long long cycles;
     pin_stats_reset();
-    compute_tran_temp(MatrixPower,MatrixTemp,grid_cols,grid_rows, \
-	 total_iterations,pyramid_height, blockCols, blockRows, borderCols, borderRows);
+    compute_tran_temp(MatrixPower,MatrixTemp,grid_cols,grid_rows,
+            total_iterations,pyramid_height, blockCols,
+            blockRows, borderCols, borderRows);
 
     cudaMemcpy(MatrixOut, MatrixTemp, sizeof(float)*size, cudaMemcpyDeviceToHost);
 
     pin_stats_pause(cycles);
     pin_stats_dump(cycles);
 
-    writeoutput(MatrixOut,grid_rows, grid_cols, ofile);
+    writeoutput(MatrixOut, grid_rows, grid_cols, ofile);
 
     cudaFree(MatrixTemp);
-    free(MatrixOut);
-	if(goldfile){
+    cudaFree(MatrixPower);
+
+    //free(MatrixOut);
+    cudaFreeHost(FilesavingTemp);
+    cudaFreeHost(FilesavingPower);
+    cudaFreeHost(MatrixOut);
+
+	if (goldfile) {
 		FILE *gold = fopen(goldfile, "r");
 		FILE *result = fopen(ofile, "r");
 		int index_result=0, index_gold=0;
@@ -348,5 +358,4 @@ void run(int argc, char** argv)
 		fclose(gold);
 		fclose(result);
 	}
-
 }

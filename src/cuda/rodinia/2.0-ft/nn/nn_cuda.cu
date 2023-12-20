@@ -81,6 +81,28 @@ __global__ void euclid(char *data, float x2, float y2,float *z, int N, int W, in
 	}
 }
 
+void append_path(char* path, char* dbname)
+{
+    char* result = (char*) malloc(strlen(path) + strlen(dbname) + 2); // null terminating and '/'
+    
+    if (result == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(1);
+    }
+
+    strcpy(result, path);
+
+    // make sure there is / between path and dbname.
+    if (result[strlen(result) - 1] != '/' && dbname[0] != '/')
+        strcat(result, "/");
+
+    strcat(result, dbname);
+
+    strcpy(dbname, result);
+    
+    free(result);
+}
+
 /**
 * This program finds the k-nearest neighbors
 * Usage:	./nn <filelist> <num> <target latitude> <target longitude>
@@ -94,32 +116,41 @@ __global__ void euclid(char *data, float x2, float y2,float *z, int N, int W, in
 int main(int argc, char* argv[])
 {
 	FILE   *flist,*fp;
+    char* filepath;
 	int    i=0,j=0, k=0, rec_count=0, done=0;
-	char   sandbox[REC_WINDOW * REC_LENGTH], dbname[64];
+	//char   sandbox[REC_WINDOW * REC_LENGTH], dbname[128];
+    char* sandbox;
+    char dbname[128];
 	struct neighbor *neighbors = NULL;
 	float target_lat, target_long;
 	char* goldfile;
-	if(argc < 6)
+
+    cudaMallocHost((void**) &sandbox, REC_WINDOW * REC_LENGTH * sizeof(char));
+
+	if (argc < 6 || argc > 7)
 	{
-		fprintf(stderr, "Invalid set of arguments\n");
+		fprintf(stderr, "Usage: ./nn <filelist> <filepath> <num> <target latitude> <target longitude> (goldfile)\n");
+        fprintf(stderr, "<>: essential, (): optional arguments\n");
 		exit(-1);
 	}
 
 	flist = fopen(argv[1], "r");
 
-	if(!flist)
+	if (!flist)
 	{
 		printf("error opening flist\n");
 		exit(1);
 	}
 
-	k = atoi(argv[2]);
-	target_lat = atof(argv[3]);
-	target_long = atof(argv[4]);
-	goldfile = argv[5];
-	neighbors = (struct neighbor*) malloc(k*sizeof(struct neighbor));
+    filepath = argv[2];
+	k = atoi(argv[3]);
+	target_lat = atof(argv[4]);
+	target_long = atof(argv[5]);
+	goldfile = argv[6];
+    cudaMallocHost((void**) &neighbors, k * sizeof(struct neighbor));
+	//neighbors = (struct neighbor*) malloc(k*sizeof(struct neighbor));
 
-	if(neighbors == NULL)
+	if (neighbors == NULL)
 	{
 		fprintf(stderr, "no room for neighbors\n");
 		exit(0);
@@ -136,11 +167,12 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "error reading filelist\n");
 		exit(0);
 	}
+    append_path(filepath, dbname);
 
-	fp = fopen(dbname, "r");  
+	fp = fopen(dbname, "r");
 	if(!fp)
 	{
-		printf("error opening flist\n");
+		printf("error opening flist, filename: %s\n", dbname);
 		exit(1);
 	}	
 
@@ -153,7 +185,8 @@ int main(int argc, char* argv[])
 	/**
 	* Allocate memory on host and device
 	*/
-	z  = (float *) malloc(REC_WINDOW * sizeof(float));
+	//z  = (float *) malloc(REC_WINDOW * sizeof(float));
+    cudaMallocHost((void**) &z, REC_WINDOW * sizeof(float));
 	cudaMalloc((void **) &data, sizeof(char) * REC_WINDOW * REC_LENGTH);	
 	cudaMalloc((void **) &z_d, sizeof(float) * REC_WINDOW);
 	for(unsigned i=0; i<REC_WINDOW * REC_LENGTH;i++)
@@ -178,11 +211,12 @@ int main(int argc, char* argv[])
 						fprintf(stderr, "error reading filelist\n");
 						exit(0);
 					}
+                    append_path(filepath, dbname);
 
 					fp = fopen(dbname, "r");
 
 					if(!fp) {
-						printf("error opening a db\n");
+						printf("error opening a db -> %s\n", dbname);
 						exit(1);
 					}
 				}
@@ -211,7 +245,7 @@ int main(int argc, char* argv[])
 
 		//Add a and b, store in c
 		euclid<<<dimGrid,dimBlock>>>(data, x2, y2, z_d, REC_WINDOW, REC_LENGTH, LATITUDE_POS);
-		cudaThreadSynchronize();
+		//cudaThreadSynchronize();
 		
 		//Copy data from device memory to host memory
 		cudaMemcpy( z, z_d, sizeof(float)*REC_WINDOW, cudaMemcpyDeviceToHost );
@@ -238,19 +272,24 @@ int main(int argc, char* argv[])
 		}
 	} //End while
         //Free memory
-	free(z);
+	//free(z);
+    cudaFreeHost(z);
+    cudaFreeHost(sandbox);
 	cudaFree(data);
 	cudaFree(z_d);
 
-	fprintf(stderr, "The %d nearest neighbors are:\n", k);
+	printf("The %d nearest neighbors are:\n", k);
 	FILE* fpo = fopen("result.txt", "w");
 	for( j = 0 ; j < k ; j++ ) {
 	  if(!(neighbors[j].dist==OPEN)){
-		 fprintf(stderr, "%s --> %f\n", neighbors[j].entry, neighbors[j].dist);
+		 printf("%s --> %f\n", neighbors[j].entry, neighbors[j].dist);
 		 fprintf(fpo, "%s --> %f\n", neighbors[j].entry, neighbors[j].dist);
 	  }
 	}
 	fclose(fpo);
+
+    cudaFreeHost(neighbors);
+
 	if(goldfile){
 		FILE *gold = fopen(goldfile, "r");
 		FILE *result = fopen("result.txt", "r");
@@ -271,6 +310,6 @@ int main(int argc, char* argv[])
 		fclose(result);
 	}
 
-	free(neighbors);
+	//free(neighbors);
 	fclose(flist);
 }

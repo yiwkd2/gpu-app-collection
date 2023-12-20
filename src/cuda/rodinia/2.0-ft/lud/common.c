@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
+#include <cuda_runtime.h>
 
 #include "common.h"
 
@@ -50,7 +51,8 @@ create_matrix_from_file(float **mp, const char* filename, int *size_p){
 
   fscanf(fp, "%d\n", &size);
 
-  m = (float*) malloc(sizeof(float)*size*size);
+  //m = (float*) malloc(sizeof(float)*size*size);
+  cudaMallocHost((void**) &m, size * size * sizeof(float));
   if ( m == NULL) {
       fclose(fp);
       return RET_FAILURE;
@@ -135,7 +137,7 @@ matrix_multiply(float *inputa, float *inputb, float *output, int size){
 
 }
 
-func_ret_t
+void
 lud_verify(float *m, float *lu, int matrix_dim, int brief_msg){
   int i,j,k;
   float *tmp = (float*)malloc(matrix_dim*matrix_dim*sizeof(float));
