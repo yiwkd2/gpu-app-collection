@@ -244,8 +244,7 @@ extern "C" {
 								   long *len);
 
 	void AVI_print_error(char *str);
-	char *AVI_strerror();
-	char *AVI_syserror();
+	char *AVI_strerror(void);
 
 	int AVI_scan(char *name);
 	int AVI_dump(char *name, int mode);
@@ -254,7 +253,7 @@ extern "C" {
 	int AVI_file_check(char *import_file);
 
 	void AVI_info(avi_t *avifile);
-	uint64_t AVI_max_size();
+	uint64_t AVI_max_size(void);
 	int avi_update_header(avi_t *AVI);
 
 	int AVI_set_audio_track(avi_t *AVI, int track);

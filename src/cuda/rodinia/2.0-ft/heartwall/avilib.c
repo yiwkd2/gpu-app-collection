@@ -60,34 +60,31 @@ static char id_str[MAX_INFO_STRLEN];
  *                                                                 *
  *******************************************************************/
 
-static size_t avi_read(int fd, char *buf, size_t len)
+static ssize_t avi_read(int fd, char *buf, size_t len)
 {
-   size_t n = 0;
-   size_t r = 0;
+   ssize_t n;
+   ssize_t r = 0;
 
-   while (r < len) {
+   while (r < (ssize_t) len) {
       n = read (fd, buf + r, len - r);
-
-      if (n <= 0)
-	  return r;
+      if (n <= 0) return r;
       r += n;
    }
 
    return r;
 }
 
-static size_t avi_write (int fd, char *buf, size_t len)
+static ssize_t avi_write (int fd, char *buf, size_t len)
 {
-   size_t n = 0;
-   size_t r = 0;
+   ssize_t n;
+   ssize_t r = 0;
 
-   while (r < len) {
+   while (r < (ssize_t) len) {
       n = write (fd, buf + r, len - r);
-      if (n < 0)
-         return n;
-      
+      if (n < 0) return n;
       r += n;
    }
+
    return r;
 }
 
@@ -315,18 +312,30 @@ void AVI_set_audio(avi_t *AVI, int channels, long rate, int bits, int format, lo
    avi_update_header(AVI);
 }
 
-#define OUT4CC(s) \
-   if(nhb<=HEADERBYTES-4) memcpy(AVI_header+nhb,s,4); nhb += 4
+#define OUT4CC(s)                       \
+    do {                                \
+        if (nhb<=HEADERBYTES-4) {       \
+            memcpy(AVI_header+nhb,s,4); \
+            nhb += 4;                   \
+        }                               \
+    } while (0)
 
-#define OUTLONG(n) \
-   if(nhb<=HEADERBYTES-4) long2str(AVI_header+nhb,n); nhb += 4
+#define OUTLONG(n)                      \
+    do {                                \
+        if (nhb<=HEADERBYTES-4) {       \
+            long2str(AVI_header+nhb,n); \
+            nhb += 4;                   \
+        }                               \
+    } while (0)
 
-#define OUTSHRT(n) \
-   if(nhb<=HEADERBYTES-2) { \
-      AVI_header[nhb  ] = (n   )&0xff; \
-      AVI_header[nhb+1] = (n>>8)&0xff; \
-   } \
-   nhb += 2
+#define OUTSHRT(n)                             \
+    do {                                       \
+        if (nhb<=HEADERBYTES-2) {              \
+            AVI_header[nhb  ] = (n   ) & 0xff; \
+            AVI_header[nhb+1] = (n>>8) & 0xff; \
+        }                                      \
+        nhb += 2;                              \
+    } while (0)
 
 
 //ThOe write preliminary AVI file header: 0 frames, max vid/aud size
@@ -543,7 +552,7 @@ int avi_update_header(avi_t *AVI)
    
    //11/14/01 added id string 
 
-   if(njunk > strlen(id_str)+8) {
+   if(njunk > (ssize_t)strlen(id_str)+8) {
      sprintf(id_str, "%s-%s", PACKAGE, VERSION);
      memcpy(AVI_header+nhb, id_str, strlen(id_str));
    }
@@ -1335,7 +1344,7 @@ int avi_parse_input_file(avi_t *AVI, int getIndex)
 
    if(AVI->idx)
    {
-      long pos, len;
+      unsigned long pos, len;
 
       /* Search the first videoframe in the idx1 and look where
          it is in the file */
@@ -1646,7 +1655,7 @@ int AVI_set_audio_position(avi_t *AVI, long byte)
    while(n0<n1-1)
    {
       n = (n0+n1)/2;
-      if(AVI->track[AVI->aptr].audio_index[n].tot>byte)
+      if(AVI->track[AVI->aptr].audio_index[n].tot>(unsigned long)byte)
          n1 = n;
       else
          n0 = n;

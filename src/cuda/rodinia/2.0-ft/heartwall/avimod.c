@@ -6,6 +6,7 @@
 //	DEFINE / INCLUDE
 //===============================================================================================================================================================================================================
 #include "avimod.h"
+#include <cuda_runtime.h>
 
 //===============================================================================================================================================================================================================
 //	FUNCTIONS
@@ -78,7 +79,9 @@ fp* chop_flip_image(	char *image,
 	}
 
 // convert storage method (from row-major to column-major)
-	fp* result_converted = (fp *) malloc(height_new * width_new * sizeof(fp));
+	//fp* result_converted = (fp *) malloc(height_new * width_new * sizeof(fp));
+	fp* result_converted;
+    cudaMallocHost((void**) &result_converted, height_new * width_new * sizeof(fp));
 	if(converted==1){
 		for(i = 0; i <width_new; i++){				// rows
 			for(j = 0; j <height_new; j++){			// colums
