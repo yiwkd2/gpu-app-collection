@@ -14,6 +14,7 @@
 ***********************************************/
 
 #include "streamcluster_header.cu"
+#include <cuda_runtime.h>
 
 using namespace std;
 
@@ -207,7 +208,10 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
 
   if( pid==0 )   {
     *kcenter = 1;
-    costs = (float*)malloc(sizeof(float)*nproc);
+    //costs = (float*)malloc(sizeof(float)*nproc);
+    cudaMallocHost((void**) &costs, nproc * sizeof(float));
+    printf("costs: %p\n", costs);
+    fflush(stdout);
   }
     
   if( pid != 0 ) { // we are not the master threads. we wait until a center is opened.
@@ -291,7 +295,8 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
 	{
 	  totalcost += costs[i];
 	} 
-      free(costs);
+      //free(costs);
+      cudaFreeHost(costs);
     }
 #ifdef ENABLE_THREADS
   pthread_barrier_wait(barrier);
@@ -378,7 +383,8 @@ int selectfeasible_fast(Points *points, int **feasible, int kmin, int pid, pthre
   int numfeasible = points->num;
   if (numfeasible > (ITER*kmin*log((float)kmin)))
     numfeasible = (int)(ITER*kmin*log((float)kmin));
-  *feasible = (int *)malloc(numfeasible*sizeof(int));
+  //*feasible = (int *)malloc(numfeasible*sizeof(int));
+  cudaMallocHost((void**) feasible, numfeasible * sizeof(int));
   
   float* accumweight;
   float totalweight;
@@ -406,7 +412,8 @@ int selectfeasible_fast(Points *points, int **feasible, int kmin, int pid, pthre
     return numfeasible;
   }
 
-  accumweight= (float*)malloc(sizeof(float)*points->num);
+  //accumweight= (float*)malloc(sizeof(float)*points->num);
+  cudaMallocHost((void**) &accumweight, points->num * sizeof(float));
   accumweight[0] = points->p[0].weight;
   totalweight=0;
   for( int i = 1; i < points->num; i++ ) {
@@ -435,7 +442,8 @@ int selectfeasible_fast(Points *points, int **feasible, int kmin, int pid, pthre
     (*feasible)[i]=r;
   }
 
-  free(accumweight); 
+  //free(accumweight); 
+  cudaFreeHost(accumweight);
 
 #ifdef PROFILE
   double t2 = gettime();
@@ -458,7 +466,8 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
   static int numfeasible;
   static float* hizs;
 
-  if( pid==0 ) hizs = (float*)calloc(nproc,sizeof(float));
+  //if( pid==0 ) hizs = (float*)calloc(nproc,sizeof(float));
+  if( pid==0 ) cudaMallocHost((void**) &hizs, nproc * sizeof(float));
   hiz = loz = 0.0;
   long numberOfPoints = points->num;
   long ptDimension = points->dim;
@@ -506,7 +515,8 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
     }
     cost = 0;
     if( pid== 0 ) {
-      free(hizs); 
+      //free(hizs); 
+      cudaFreeHost(hizs);
       *kfinal = k;
     }
     return cost;
@@ -619,8 +629,10 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
 
   //clean up...
   if( pid==0 ) {
-    free(feasible); 
-    free(hizs);
+    //free(feasible); 
+    //free(hizs);
+    cudaFreeHost(feasible);
+    cudaFreeHost(hizs);
     *kfinal = k;
   }
 
@@ -656,7 +668,9 @@ void copycenters(Points *points, Points* centers, long* centerIDs, long offset)
   long i;
   long k;
 
-  bool *is_a_median = (bool *) calloc(points->num, sizeof(bool));
+  //bool *is_a_median = (bool *) calloc(points->num, sizeof(bool));
+  bool* is_a_median;
+  cudaMallocHost((void**) &is_a_median, points->num * sizeof(bool));
 
   /* mark the centers */
   for ( i = 0; i < points->num; i++ ) {
@@ -677,7 +691,8 @@ void copycenters(Points *points, Points* centers, long* centerIDs, long offset)
 
   centers->num = k;
 
-  free(is_a_median);
+  //free(is_a_median);
+  cudaFreeHost(is_a_median);
 }
 
 
@@ -743,7 +758,9 @@ void outcenterIDs( Points* centers, long* centerIDs, char* outfile ) {
     fprintf(stderr, "error opening %s\n",outfile);
     exit(1);
   }
-  int* is_a_median = (int*)calloc( sizeof(int), centers->num );
+  //int* is_a_median = (int*)calloc( sizeof(int), centers->num );
+  int* is_a_median;
+  cudaMallocHost((void**) &is_a_median, centers->num * sizeof(int));
   for( int i =0 ; i< centers->num; i++ ) {
     is_a_median[centers->p[i].assign] = 1;
   }
@@ -765,9 +782,18 @@ void streamCluster( PStream* stream,
 		    long kmin, long kmax, int dim,
 		    long chunksize, long centersize, char* outfile )
 {
+  /*
   float* block = (float*)malloc( chunksize*dim*sizeof(float) );
   float* centerBlock = (float*)malloc(centersize*dim*sizeof(float) );
   long* centerIDs = (long*)malloc(centersize*dim*sizeof(long));
+  */
+  float* block;
+  float* centerBlock;
+  long* centerIDs;
+
+  cudaMallocHost((void**) &block, chunksize * dim * sizeof(float));
+  cudaMallocHost((void**) &centerBlock, centersize * dim * sizeof(float));
+  cudaMallocHost((void**) &centerIDs, centersize * dim * sizeof(long));
 
   if( block == NULL ) { 
     fprintf(stderr,"not enough memory for a chunk!\n");
@@ -777,7 +803,8 @@ void streamCluster( PStream* stream,
   Points points;
   points.dim = dim;
   points.num = chunksize;
-  points.p = (Point *)malloc(chunksize*sizeof(Point));
+  //points.p = (Point *)malloc(chunksize*sizeof(Point));
+  cudaMallocHost((void**) &(points.p), chunksize * sizeof(Point));
   for( int i = 0; i < chunksize; i++ ) {
     points.p[i].coord = &block[i*dim];		
   }
@@ -785,7 +812,8 @@ void streamCluster( PStream* stream,
 
   Points centers;
   centers.dim = dim;
-  centers.p = (Point *)malloc(centersize*sizeof(Point));
+  //centers.p = (Point *)malloc(centersize*sizeof(Point));
+  cudaMallocHost((void**) &(centers.p), centersize * sizeof(Point));
   centers.num = 0;
 
   for( int i = 0; i< centersize; i++ ) {
@@ -810,9 +838,14 @@ void streamCluster( PStream* stream,
       points.p[i].weight = 1.0;
     }
 
+    /*
     switch_membership = (bool*)malloc(points.num*sizeof(bool));
     is_center = (bool*)calloc(points.num,sizeof(bool));
     center_table = (int*)malloc(points.num*sizeof(int));
+    */
+    cudaMallocHost((void**) &switch_membership, points.num * sizeof(bool));
+    cudaMallocHost((void**) &is_center, points.num * sizeof(bool));
+    cudaMallocHost((void**) &center_table, points.num * sizeof(int));
 
     localSearch(&points,kmin, kmax,&kfinal);
 
@@ -835,9 +868,14 @@ void streamCluster( PStream* stream,
     printf("finish copy centers\n"); 
 #endif
 
+    /*
     free(is_center);
     free(switch_membership);
     free(center_table);
+    */
+    cudaFreeHost(is_center);
+    cudaFreeHost(switch_membership);
+    cudaFreeHost(center_table);
 
     if( stream->feof() ) {
       break;
@@ -845,9 +883,14 @@ void streamCluster( PStream* stream,
   }
 
   //finally cluster all temp centers
+  /*
   switch_membership = (bool*)malloc(centers.num*sizeof(bool));
   is_center = (bool*)calloc(centers.num,sizeof(bool));
   center_table = (int*)malloc(centers.num*sizeof(int));
+  */
+  cudaMallocHost((void**) &switch_membership, centers.num * sizeof(bool));
+  cudaMallocHost((void**) &is_center, centers.num * sizeof(bool));
+  cudaMallocHost((void**) &center_table, centers.num * sizeof(int));
 
   localSearch( &centers, kmin, kmax ,&kfinal );
   contcenters(&centers);
@@ -873,8 +916,8 @@ int main(int argc, char **argv)
   __parsec_bench_begin(__parsec_streamcluster);
 #endif
 
-  if (argc<11) {
-    fprintf(stderr,"usage: %s k1 k2 d n chunksize clustersize infile outfile nproc goldfile\n",
+  if (argc > 11 || argc < 10) {
+    fprintf(stderr,"usage: %s k1 k2 d n chunksize clustersize infile outfile nproc (goldfile)\n",
 	    argv[0]);
     fprintf(stderr,"  k1:          Min. number of centers allowed\n");
     fprintf(stderr,"  k2:          Max. number of centers allowed\n");
@@ -899,8 +942,11 @@ int main(int argc, char **argv)
   strcpy(infilename, argv[7]);
   strcpy(outfilename, argv[8]);
   nproc = atoi(argv[9]);
-  const char* goldfile = argv[10];
   const char* outfile = argv[8];
+  const char* goldfile;
+  if (argc == 11) goldfile = argv[10];
+  else goldfile = NULL;
+
   srand48(SEED);
   PStream* stream;
   if( n > 0 ) {
@@ -946,14 +992,14 @@ int main(int argc, char **argv)
   printf("time pspeedy = %lf\n", time_speedy);
   printf("time pshuffle = %lf\n", time_shuffle);
   printf("time localSearch = %lf\n", time_local_search);
-	printf("\n");
-	printf("====GPU Timing info====\n");
-	printf("time serial = %lf\n", serial);
-	printf("time CPU to GPU memory copy = %lf\n", cpu_gpu_memcpy);
-	printf("time GPU to CPU memory copy back = %lf\n", memcpy_back);
-	printf("time GPU malloc = %lf\n", gpu_malloc);
-	printf("time GPU free = %lf\n", gpu_free);
-	printf("time kernel = %lf\n", kernel);
+  printf("\n");
+  printf("====GPU Timing info====\n");
+  printf("time serial = %lf\n", serial);
+  printf("time CPU to GPU memory copy = %lf\n", cpu_gpu_memcpy);
+  printf("time GPU to CPU memory copy back = %lf\n", memcpy_back);
+  printf("time GPU malloc = %lf\n", gpu_malloc);
+  printf("time GPU free = %lf\n", gpu_free);
+  printf("time kernel = %lf\n", kernel);
  #endif
   
 #ifdef ENABLE_PARSEC_HOOKS

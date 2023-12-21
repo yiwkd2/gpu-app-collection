@@ -45,7 +45,11 @@ runTest( int argc, char** argv)
     
 	const char* infile;
 	const char* goldfile;
-	if (argc == 9) {
+    if (argc > 9 || argc < 8) {
+		printf("Usage: <infile> <r1> <r2> <c1> <c2> <lambda> <niter> (goldfile)\n");
+		printf("<>: essential, (): optional arguments\n");
+		exit(1);
+    } else {
 		infile = argv[1];  //matrix input file
 		r1   = atoi(argv[2]);  //y1 position of the speckle
 		r2   = atoi(argv[3]);  //y2 position of the speckle
@@ -53,12 +57,10 @@ runTest( int argc, char** argv)
 		c2   = atoi(argv[5]);  //x2 position of the speckle
 		lambda = atof(argv[6]); //Lambda value
 		niter = atoi(argv[7]); //number of iterations
-		goldfile = argv[8];
-	}
-	else {
-		printf("Wrong Usage: infile r1 r2 c1 c2 lambda niter\n");
-		exit(1);
-	}
+
+        if (argc == 9) goldfile = argv[8];
+        else goldfile = NULL;
+    }
 
 	FILE* ifile = fopen(infile, "r");
 	if (!ifile) {
@@ -102,9 +104,15 @@ runTest( int argc, char** argv)
 
 #endif
 
+    /*
 	I = (float *)malloc( size_I * sizeof(float) );
     J = (float *)malloc( size_I * sizeof(float) );
 	c  = (float *)malloc(sizeof(float)* size_I) ;
+    */
+
+    cudaMallocHost((void**) &I, size_I * sizeof(float));
+    cudaMallocHost((void**) &J, size_I * sizeof(float));
+    cudaMallocHost((void**) &c, size_I * sizeof(float));
 
 	//Generate a random matrix
 	//random_matrix(I, rows, cols);
@@ -128,7 +136,7 @@ runTest( int argc, char** argv)
 #endif
 
 
- for (iter=0; iter< niter; iter++){     
+ for (iter=0; iter< niter; iter++) { 
 		sum=0; sum2=0;
         for (int i=r1; i<=r2; i++) {
             for (int j=c1; j<=c2; j++) {
@@ -228,11 +236,18 @@ runTest( int argc, char** argv)
 
 	//Copy data from device memory to main memory
     cudaMemcpy(J, J_cuda, sizeof(float) * size_I, cudaMemcpyDeviceToHost);
+  
+    cudaFree(J_cuda);
+    cudaFree(C_cuda);
+    cudaFree(E_C);
+    cudaFree(W_C);
+    cudaFree(S_C);
+    cudaFree(N_C);
 
 #endif   
-}
+    }
 
-    cudaThreadSynchronize();
+    //cudaThreadSynchronize();
 
 #ifdef TIMER
 		CUT_SAFE_CALL( cutStopTimer( timer_1 ));
@@ -285,14 +300,18 @@ runTest( int argc, char** argv)
 		printf("\nFAILED\n");
 	}
 
+    /*
 	free(I);
 	free(J);
+	free(c);
+    */
+    cudaFreeHost(I);
+    cudaFreeHost(J);
+    cudaFreeHost(c);
 #ifdef CPU
 	free(iN); free(iS); free(jW); free(jE);
     free(dN); free(dS); free(dW); free(dE);
 #endif 
-	free(c);
-  
 }
 
 

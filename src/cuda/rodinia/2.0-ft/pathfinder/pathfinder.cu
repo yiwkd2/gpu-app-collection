@@ -22,40 +22,46 @@ char* goldfile;
 void
 init(int argc, char** argv)
 {
-	if(argc==5){
-		cols = atoi(argv[1]);
-		rows = atoi(argv[2]);
+    if (argc > 5 || argc < 4) {
+        printf("Usage: ./pathfinder <row_len> <col_len> <pyramid_height> (goldfile)\n");
+        printf("<>: essential, (): optional arguments");
+        exit(0);
+    } else {
+		cols = atoi(argv[1]);
+		rows = atoi(argv[2]);
 		pyramid_height=atoi(argv[3]);
-		goldfile = argv[4];
-	}else{
-                printf("Usage: dynproc row_len col_len pyramid_height\n");
-                exit(0);
+        
+        if (argc == 5) goldfile = argv[4];
+        else goldfile = NULL;
+    }
+
+	//data = new int[rows*cols];
+    cudaMallocHost((void**) &data, rows * cols * sizeof(int));
+	wall = new int*[rows];
+	for(int n=0; n<rows; n++)
+		wall[n]=data+cols*n;
+	//result = new int[cols];
+    cudaMallocHost((void**) &result, cols * sizeof(int));
+	
+	int seed = M_SEED;
+	srand(seed);
+
+	for (int i = 0; i < rows; i++)
+    {
+        for (int j = 0; j < cols; j++)
+        {
+            wall[i][j] = rand() % 10;
         }
-	data = new int[rows*cols];
-	wall = new int*[rows];
-	for(int n=0; n<rows; n++)
-		wall[n]=data+cols*n;
-	result = new int[cols];
-	
-	int seed = M_SEED;
-	srand(seed);
-
-	for (int i = 0; i < rows; i++)
-    {
-        for (int j = 0; j < cols; j++)
-        {
-            wall[i][j] = rand() % 10;
-        }
-    }
-#ifdef BENCH_PRINT
-    for (int i = 0; i < rows; i++)
-    {
-        for (int j = 0; j < cols; j++)
-        {
-            printf("%d ",wall[i][j]) ;
-        }
-        printf("\n") ;
-    }
+    }
+#ifdef BENCH_PRINT
+    for (int i = 0; i < rows; i++)
+    {
+        for (int j = 0; j < cols; j++)
+        {
+            printf("%d ",wall[i][j]) ;
+        }
+        printf("\n") ;
+    }
 #endif
 }
 
@@ -193,8 +199,9 @@ void run(int argc, char** argv)
     int smallBlockCol = BLOCK_SIZE-(pyramid_height)*HALO*2;
     int blockCols = cols/smallBlockCol+((cols%smallBlockCol==0)?0:1);
 
-    printf("pyramidHeight: %d\ngridSize: [%d]\nborder:[%d]\nblockSize: %d\nblockGrid:[%d]\ntargetBlock:[%d]\n",\
-	pyramid_height, cols, borderCols, BLOCK_SIZE, blockCols, smallBlockCol);
+    printf("pyramidHeight: %d\ngridSize: [%d]\nborder:[%d]\nblockSize: %d\n"
+            "blockGrid:[%d]\ntargetBlock:[%d]\n", pyramid_height, cols,
+            borderCols, BLOCK_SIZE, blockCols, smallBlockCol);
 	
     int *gpuWall, *gpuResult[2];
     int size = rows*cols;
@@ -206,8 +213,8 @@ void run(int argc, char** argv)
     cudaMemcpy(gpuWall, data+cols, sizeof(int)*(size-cols), cudaMemcpyHostToDevice);
 
 
-    int final_ret = calc_path(gpuWall, gpuResult, rows, cols, \
-	 pyramid_height, blockCols, borderCols);
+    int final_ret = calc_path(gpuWall, gpuResult, rows, cols,
+            pyramid_height, blockCols, borderCols);
 
     cudaMemcpy(result, gpuResult[final_ret], sizeof(int)*cols, cudaMemcpyDeviceToHost);
 
@@ -254,9 +261,11 @@ void run(int argc, char** argv)
     cudaFree(gpuResult[0]);
     cudaFree(gpuResult[1]);
 
-    delete [] data;
+    //delete [] data;
+    cudaFreeHost(data);
     delete [] wall;
-    delete [] result;
+    //delete [] result;
+    cudaFreeHost(result);
 
 }
 

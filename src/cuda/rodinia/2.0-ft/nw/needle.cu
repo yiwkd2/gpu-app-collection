@@ -78,15 +78,14 @@ void runTest( int argc, char** argv)
     const char* goldfile;
     // the lengths of the two sequences should be able to divided by 16.
 	// And at current stage  max_rows needs to equal max_cols
-	if (argc >= 3)
-	{
+    if (argc > 4 || argc < 3) usage(argc, argv);
+    else {
 		max_rows = atoi(argv[1]);
 		max_cols = atoi(argv[1]);
 		penalty = atoi(argv[2]);
-		goldfile = argv[3];
-	}
-    else{
-	usage(argc, argv);
+        
+        if (argc == 4) goldfile = argv[3];
+        else goldfile = NULL;
     }
 	
 	if(atoi(argv[1])%16!=0){
@@ -97,9 +96,14 @@ void runTest( int argc, char** argv)
 
 	max_rows = max_rows + 1;
 	max_cols = max_cols + 1;
+    /*
 	referrence = (int *)malloc( max_rows * max_cols * sizeof(int) );
     input_itemsets = (int *)malloc( max_rows * max_cols * sizeof(int) );
 	output_itemsets = (int *)malloc( max_rows * max_cols * sizeof(int) );
+    */
+    cudaMallocHost((void**) &referrence, max_rows * max_cols * sizeof(int));
+    cudaMallocHost((void**) &input_itemsets, max_rows * max_cols * sizeof(int));
+    cudaMallocHost((void**) &output_itemsets, max_rows * max_cols * sizeof(int));
 	
 
 	if (!input_itemsets)
@@ -251,5 +255,8 @@ void runTest( int argc, char** argv)
 	cudaFree(matrix_cuda);
 	cudaFree(matrix_cuda_out);
 
+    cudaFreeHost(referrence);
+    cudaFreeHost(input_itemsets);
+    cudaFreeHost(output_itemsets);
 }
 

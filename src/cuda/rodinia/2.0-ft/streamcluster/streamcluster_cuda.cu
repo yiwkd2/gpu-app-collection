@@ -101,11 +101,12 @@ void quit(char *message){
 }
 
 void allocDevMem(int num, int dim, int kmax){
-	if( cudaMalloc((void**) &work_mem_d,  kmax * num * sizeof(float))!= cudaSuccess) quit("error allocating device memory");	
-	if( cudaMalloc((void**) &center_table_d,  num * sizeof(int))!= cudaSuccess) quit("error allocating device memory");
-	if( cudaMalloc((void**) &switch_membership_d,  num * sizeof(bool))!= cudaSuccess) quit("error allocating device memory");
-	if( cudaMalloc((void**) &p,  num * sizeof(Point))!= cudaSuccess) quit("error allocating device memory");
-	if( cudaMalloc((void**) &coord_d,  num * dim * sizeof(float))!= cudaSuccess) quit("error allocating device memory");
+    char err_mesg[64] = "error allocating device memory";
+	if( cudaMalloc((void**) &work_mem_d,  kmax * num * sizeof(float))!= cudaSuccess) quit(err_mesg);
+	if( cudaMalloc((void**) &center_table_d,  num * sizeof(int))!= cudaSuccess) quit(err_mesg);
+	if( cudaMalloc((void**) &switch_membership_d,  num * sizeof(bool))!= cudaSuccess) quit(err_mesg);
+	if( cudaMalloc((void**) &p,  num * sizeof(Point))!= cudaSuccess) quit(err_mesg);
+	if( cudaMalloc((void**) &coord_d,  num * dim * sizeof(float))!= cudaSuccess) quit(err_mesg);
 }
 
 void freeDevMem(){	
@@ -114,9 +115,11 @@ void freeDevMem(){
 	cudaFree(switch_membership_d);	
 	cudaFree(p);
 	cudaFree(coord_d);
+	//free(coord_h);
+	//free(gl_lower);
+    cudaFreeHost(coord_h);
+    cudaFreeHost(gl_lower);
 	cudaFreeHost(work_mem_h);
-	free(coord_h);
-	free(gl_lower);
 }
 
 float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bool *is_center, int *center_table, bool *switch_membership,
@@ -130,7 +133,6 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 	int num    =   points->num;				// number of points
 	int dim     =   points->dim;				// number of dimension
 	kmax++;
-	
 	
 	
 	/***** build center index table *****/
@@ -157,8 +159,10 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 		*gpu_malloc += t4 - t3;
 #endif
 		
-		coord_h = (float*) malloc( num * dim * sizeof(float));								// coordinates (host)
-		gl_lower = (float*) malloc( kmax * sizeof(float) );
+		//coord_h = (float*) malloc( num * dim * sizeof(float));								// coordinates (host)
+		//gl_lower = (float*) malloc( kmax * sizeof(float) );
+        cudaMallocHost((void**) &coord_h, num * dim * sizeof(float));
+        cudaMallocHost((void**) &gl_lower, kmax * sizeof(float));
 		cudaMallocHost( (void**)&work_mem_h,  kmax * num * sizeof(float) );
 		
 		/* prepare mapping for point coordinates */
@@ -219,7 +223,7 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 																											center_table_d,				// in:	center index table
 																											switch_membership_d		// out:  changes in membership
 																										  );
-	cudaThreadSynchronize();
+	//cudaThreadSynchronize();
 	
 #ifdef PROFILE
 	double t10 = gettime();
@@ -228,7 +232,10 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 	
 	
 	/***** copy back to host for CPU side work *****/
-	cudaMemcpy(work_mem_h, work_mem_d, (K+1) *num*sizeof(float), cudaMemcpyDeviceToHost);
+    printf("memcpy size at %d: %lu (K: %d, num: %d)\n", __LINE__, (K+1) * num * sizeof(float),
+            K, num);
+    fflush(stdout);
+	cudaMemcpy(work_mem_h, work_mem_d, (K+1) * num * sizeof(float), cudaMemcpyDeviceToHost);
 	cudaMemcpy(switch_membership, switch_membership_d, num * sizeof(bool), cudaMemcpyDeviceToHost);
 
 #ifdef PROFILE
@@ -242,7 +249,7 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 	float gl_cost = z;
 	
 	/* compute the number of centers to close if we are to open i */
-	for(int i=0; i < num; i++){
+	for (int i=0; i < num; i++) {
 		if( is_center[i] ) {
 			float low = z;
 			
