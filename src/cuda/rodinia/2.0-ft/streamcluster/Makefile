@@ -40,8 +40,9 @@ CUFILES		:= streamcluster_cuda.cu
 # CUDA dependency files
 CU_DEPS		:= streamcluster_header.cu
 # C/C++ source files (compiled with gcc / c++)
-#CCFILES		:= streamcluster_cuda_cpu.cpp
-CCFILES		:= streamcluster_original.cpp
+CCFILES		:= streamcluster_cuda_cpu.cpp
+#CCFILES		:= streamcluster_original.cpp
+gpudbg=1
 
 OMIT_CUTIL_LIB=1
 OMIT_SHRUTIL_LIB=1

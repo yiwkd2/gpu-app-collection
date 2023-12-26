@@ -29,7 +29,7 @@ using namespace std;
 /* higher ITER also scales the running time almost linearly */
 #define ITER 1 		//Ali: Was 3 				// iterate ITER* k log k times; ITER >= 1
 
-//#define PRINTINFO 			//comment this out to disable output
+#define PRINTINFO 			//comment this out to disable output
 #define PROFILE 					// comment this out to disable instrumentation code
 //#define ENABLE_THREADS  // comment this out to disable threads
 //#define INSERT_WASTE 		//uncomment this to insert waste computation into dist function
@@ -210,7 +210,6 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
     *kcenter = 1;
     //costs = (float*)malloc(sizeof(float)*nproc);
     cudaMallocHost((void**) &costs, nproc * sizeof(float));
-    printf("costs: %p\n", costs);
     fflush(stdout);
   }
     
@@ -371,6 +370,7 @@ float pFL(Points *points, int *feasible, int numfeasible,
     pthread_barrier_wait(barrier);
 #endif
   }
+
   return(cost);
 }
 
@@ -576,8 +576,8 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
 #ifdef PRINTINFO
     if( pid==0 )
       {
-	printf("loz = %lf, hiz = %lf\n", loz, hiz);
-	printf("Running Local Search...\n");
+        printf("loz = %lf, hiz = %lf\n", loz, hiz);
+        printf("Running Local Search...\n");
       }
 #endif
     /* first get a rough estimate on the FL solution */
@@ -671,6 +671,7 @@ void copycenters(Points *points, Points* centers, long* centerIDs, long offset)
   //bool *is_a_median = (bool *) calloc(points->num, sizeof(bool));
   bool* is_a_median;
   cudaMallocHost((void**) &is_a_median, points->num * sizeof(bool));
+  memset(is_a_median, 0, points->num * sizeof(bool));
 
   /* mark the centers */
   for ( i = 0; i < points->num; i++ ) {
@@ -770,7 +771,7 @@ void outcenterIDs( Points* centers, long* centerIDs, char* outfile ) {
       fprintf(fp, "%u\n", centerIDs[i]);
       fprintf(fp, "%lf\n", centers->p[i].weight);
       for( int k = 0; k < centers->dim; k++ ) {
-	fprintf(fp, "%lf ", centers->p[i].coord[k]);
+	    fprintf(fp, "%lf ", centers->p[i].coord[k]);
       }
       fprintf(fp,"\n\n");
     }
@@ -851,6 +852,7 @@ void streamCluster( PStream* stream,
 
     fprintf(stderr,"finish local search\n");
     contcenters(&points);
+
     if( kfinal + centers.num > centersize ) {
       //here we don't handle the situation where # of centers gets too large. 
       fprintf(stderr,"oops! no more space for centers\n");

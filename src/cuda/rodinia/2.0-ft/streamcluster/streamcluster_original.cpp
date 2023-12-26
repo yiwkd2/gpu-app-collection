@@ -52,10 +52,10 @@ using namespace std;
 
 /* higher ITER --> more likely to get correct # of centers */
 /* higher ITER also scales the running time almost linearly */
-#define ITER 3 // iterate ITER* k log k times; ITER >= 1
+#define ITER 1 // iterate ITER* k log k times; ITER >= 1
 
-//#define PRINTINFO //comment this out to disable output
-//#define PROFILE // comment this out to disable instrumentation code
+#define PRINTINFO //comment this out to disable output
+#define PROFILE // comment this out to disable instrumentation code
 //#define ENABLE_THREADS  // comment this out to disable threads
 //#define INSERT_WASTE //uncomment this to insert waste computation into dist function
 
@@ -234,6 +234,7 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
   if( pid==0 )   {
     *kcenter = 1;
     costs = (double*)malloc(sizeof(double)*nproc);
+    fflush(stdout); 
   }
     
   if( pid != 0 ) { // we are not the master threads. we wait until a center is opened.
@@ -638,6 +639,7 @@ float pFL(Points *points, int *feasible, int numfeasible,
     pthread_barrier_wait(barrier);
 #endif
   }
+
   return(cost);
 }
 
@@ -837,8 +839,8 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
 #ifdef PRINTINFO
     if( pid==0 )
       {
-	printf("loz = %lf, hiz = %lf\n", loz, hiz);
-	printf("Running Local Search...\n");
+        printf("loz = %lf, hiz = %lf\n", loz, hiz);
+        printf("Running Local Search...\n");
       }
 #endif
     /* first get a rough estimate on the FL solution */

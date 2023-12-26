@@ -44,6 +44,7 @@ CFILES		:= facetrain.c imagenet.c backprop.c
 
 OMIT_CUTIL_LIB=1
 OMIT_SHRUTIL_LIB=1
+#gpudbg=1
 
 ################################################################################
 # Rules and targets

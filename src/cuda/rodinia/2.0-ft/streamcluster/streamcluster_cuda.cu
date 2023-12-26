@@ -232,9 +232,11 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 	
 	
 	/***** copy back to host for CPU side work *****/
+    /*
     printf("memcpy size at %d: %lu (K: %d, num: %d)\n", __LINE__, (K+1) * num * sizeof(float),
             K, num);
     fflush(stdout);
+    */
 	cudaMemcpy(work_mem_h, work_mem_d, (K+1) * num * sizeof(float), cudaMemcpyDeviceToHost);
 	cudaMemcpy(switch_membership, switch_membership_d, num * sizeof(bool), cudaMemcpyDeviceToHost);
 
@@ -259,7 +261,7 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 		    gl_lower[center_table[i]] = low;
 				
 		    if ( low > 0 ) {
-				numclose++;				
+				numclose++;
 				work_mem_h[i*(K+1)+K] -= low;
 		    }
 		}
