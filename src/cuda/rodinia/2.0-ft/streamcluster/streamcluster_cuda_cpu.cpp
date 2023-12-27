@@ -91,6 +91,7 @@ int isIdentical(float *i, float *j, int D){
 }
 
 /* comparator for floating point numbers */
+/*
 static int floatcomp(const void *i, const void *j)
 {
   float a, b;
@@ -100,6 +101,7 @@ static int floatcomp(const void *i, const void *j)
   if (a < b) return (-1);
   return(0);
 }
+*/
 
 /* shuffle points into random order */
 void shuffle(Points *points)
@@ -184,18 +186,18 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
 
   static float totalcost;
   
-  static bool open = false;
   static float* costs; //cost for each thread. 
   static int i;
 
 #ifdef ENABLE_THREADS
+  static bool open = false;
   static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
   static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 #endif
 
 #ifdef PRINTINFO
   if( pid == 0 ){
-    fprintf(stderr, "Speedy: facility cost %lf\n", z);
+    printf("Speedy: facility cost %lf\n", z);
   }
 #endif
 
@@ -243,9 +245,7 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
 	(*kcenter)++;
 #ifdef ENABLE_THREADS
 	pthread_mutex_lock(&mutex);
-#endif
 	open = true;
-#ifdef ENABLE_THREADS
 	pthread_mutex_unlock(&mutex);
 	pthread_cond_broadcast(&cond);
 #endif
@@ -258,26 +258,22 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
 	}
 #ifdef ENABLE_THREADS
 	pthread_barrier_wait(barrier);
-#endif
 	open = false;
-#ifdef ENABLE_THREADS
 	pthread_barrier_wait(barrier);
 #endif
       }
     }
 #ifdef ENABLE_THREADS
     pthread_mutex_lock(&mutex);
-#endif
     open = true;
-#ifdef ENABLE_THREADS
     pthread_mutex_unlock(&mutex);
     pthread_cond_broadcast(&cond);
 #endif
   }
 #ifdef ENABLE_THREADS
   pthread_barrier_wait(barrier);
-#endif
   open = false;
+#endif
   float mytotal = 0;
   for( int k = k1; k < k2; k++ )  {
     mytotal += points->p[k].cost;
@@ -304,9 +300,9 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
 #ifdef PRINTINFO
   if( pid == 0 )
     {
-      fprintf(stderr, "Speedy opened %d facilities for total cost %lf\n",
+      printf("Speedy opened %ld facilities for total cost %lf\n",
 	      *kcenter, totalcost);
-      fprintf(stderr, "Distance Cost %lf\n", totalcost - z*(*kcenter));
+      printf("Distance Cost %lf\n", totalcost - z*(*kcenter));
     }
 #endif
 
@@ -337,14 +333,12 @@ float pFL(Points *points, int *feasible, int numfeasible,
   long i;
   long x;
   float change;
-  long numberOfPoints;
 
   change = cost;
   /* continue until we run iter iterations without improvement */
   /* stop instead if improvement is less than e */
   while (change/cost > 1.0*e) {
     change = 0.0;
-    numberOfPoints = points->num;
     /* randomize order in which centers are considered */
 
     if( pid == 0 ) {
@@ -362,7 +356,7 @@ float pFL(Points *points, int *feasible, int numfeasible,
     cost -= change;
 #ifdef PRINTINFO
     if( pid == 0 ) {
-      fprintf(stderr, "%d centers, cost %lf, total distance %lf\n",
+      printf("%ld centers, cost %lf, total distance %lf\n",
 	      *k, cost, cost - z*(*k));
     }
 #endif
@@ -458,7 +452,7 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
 {
   int i;
   float cost;
-  float lastcost;
+  //float lastcost;
   float hiz, loz, z;
 
   static long k;
@@ -482,7 +476,7 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
   if( pid == 0 )
     {
       printf("Starting Kmedian procedure\n");
-      printf("%i points in %i dimensions\n", numberOfPoints, ptDimension);
+      printf("%ld points in %ld dimensions\n", numberOfPoints, ptDimension);
     }
 #endif
 
@@ -527,7 +521,7 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
 
 #ifdef PRINTINFO
   if( pid == 0 )
-    printf("thread %d: Finished first call to speedy, cost=%lf, k=%i\n",pid,cost,k);
+    printf("thread %d: Finished first call to speedy, cost=%lf, k=%li\n",pid,cost,k);
 #endif
   i=0;
   /* give speedy SP chances to get at least kmin/2 facilities */
@@ -538,7 +532,7 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
 
 #ifdef PRINTINFO
   if( pid==0)
-    printf("thread %d: second call to speedy, cost=%lf, k=%d\n",pid,cost,k);
+    printf("thread %d: second call to speedy, cost=%lf, k=%ld\n",pid,cost,k);
 #endif 
   /* if still not enough facilities, assume z is too high */
   while (k < kmin) {
@@ -582,7 +576,7 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
 #endif
     /* first get a rough estimate on the FL solution */
     //    pthread_barrier_wait(barrier);		
-    lastcost = cost;
+    //lastcost = cost;
     cost = pFL(points, feasible, numfeasible,
 	       z, &k, kmax, cost, (long)(ITER*kmax*log((float)kmax)), 0.1, pid, barrier);
 
@@ -768,7 +762,7 @@ void outcenterIDs( Points* centers, long* centerIDs, char* outfile ) {
 
   for( int i = 0; i < centers->num; i++ ) {
     if( is_a_median[i] ) {
-      fprintf(fp, "%u\n", centerIDs[i]);
+      fprintf(fp, "%ld\n", centerIDs[i]);
       fprintf(fp, "%lf\n", centers->p[i].weight);
       for( int k = 0; k < centers->dim; k++ ) {
 	    fprintf(fp, "%lf ", centers->p[i].coord[k]);
@@ -827,9 +821,9 @@ void streamCluster( PStream* stream,
   while(1) {
 
     size_t numRead  = stream->read(block, dim, chunksize ); 
-    fprintf(stderr,"read %d points\n",numRead);
+    printf("read %lu points\n",numRead);
 
-    if( stream->ferror() || numRead < (unsigned int)chunksize && !stream->feof() ) {
+    if( stream->ferror() || (numRead < (unsigned int)chunksize && !stream->feof()) ) {
       fprintf(stderr, "error reading data!\n");
       exit(1);
     }
@@ -850,12 +844,12 @@ void streamCluster( PStream* stream,
 
     localSearch(&points,kmin, kmax,&kfinal);
 
-    fprintf(stderr,"finish local search\n");
+    printf("finish local search\n");
     contcenters(&points);
 
     if( kfinal + centers.num > centersize ) {
       //here we don't handle the situation where # of centers gets too large. 
-      fprintf(stderr,"oops! no more space for centers\n");
+      printf("oops! no more space for centers\n");
       exit(1);
     }
 
@@ -919,20 +913,20 @@ int main(int argc, char **argv)
 #endif
 
   if (argc > 11 || argc < 10) {
-    fprintf(stderr,"usage: %s k1 k2 d n chunksize clustersize infile outfile nproc (goldfile)\n",
+    printf("usage: %s k1 k2 d n chunksize clustersize infile outfile nproc (goldfile)\n",
 	    argv[0]);
-    fprintf(stderr,"  k1:          Min. number of centers allowed\n");
-    fprintf(stderr,"  k2:          Max. number of centers allowed\n");
-    fprintf(stderr,"  d:           Dimension of each data point\n");
-    fprintf(stderr,"  n:           Number of data points\n");
-    fprintf(stderr,"  chunksize:   Number of data points to handle per step\n");
-    fprintf(stderr,"  clustersize: Maximum number of intermediate centers\n");
-    fprintf(stderr,"  infile:      Input file (if n<=0)\n");
-    fprintf(stderr,"  outfile:     Output file\n");
-    fprintf(stderr,"  nproc:       Number of threads to use\n");
-    fprintf(stderr,"  goldfile:    File to verify the output\n");
-    fprintf(stderr,"\n");
-    fprintf(stderr, "if n > 0, points will be randomly generated instead of reading from infile.\n");
+    printf("  k1:          Min. number of centers allowed\n");
+    printf("  k2:          Max. number of centers allowed\n");
+    printf("  d:           Dimension of each data point\n");
+    printf("  n:           Number of data points\n");
+    printf("  chunksize:   Number of data points to handle per step\n");
+    printf("  clustersize: Maximum number of intermediate centers\n");
+    printf("  infile:      Input file (if n<=0)\n");
+    printf("  outfile:     Output file\n");
+    printf("  nproc:       Number of threads to use\n");
+    printf("  goldfile:    File to verify the output\n");
+    printf("\n");
+    printf( "if n > 0, points will be randomly generated instead of reading from infile.\n");
     exit(1);
   }
   kmin = atoi(argv[1]);

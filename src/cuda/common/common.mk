@@ -81,7 +81,6 @@ INCLUDES  += -I. -I$(CUDA_INSTALL_PATH)/include -I$(COMMONDIR)/inc -I$(SHAREDDIR
 # Warning flags
 CXXWARN_FLAGS := \
 	-W -Wall \
-	-Wimplicit \
 	-Wswitch \
 	-Wformat \
 	-Wchar-subscripts \
