@@ -29,13 +29,11 @@ using namespace std;
 /* higher ITER also scales the running time almost linearly */
 #define ITER 1 		//Ali: Was 3 				// iterate ITER* k log k times; ITER >= 1
 
-#define PRINTINFO 			//comment this out to disable output
 #define PROFILE 					// comment this out to disable instrumentation code
 //#define ENABLE_THREADS  // comment this out to disable threads
 //#define INSERT_WASTE 		//uncomment this to insert waste computation into dist function
 
 #define CACHE_LINE 512 		// cache line in byte
-
 
 /* global */
 static bool *switch_membership;	//whether to switch membership in pgain
@@ -43,6 +41,8 @@ static bool *is_center;						//whether a point is a center
 static int  *center_table;					//index table of centers
 
 static int nproc; 								//# of threads
+
+FILE* fapp_trace;
 
 /* timing info */
 static double serial;
@@ -195,11 +195,9 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
   static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 #endif
 
-#ifdef PRINTINFO
   if( pid == 0 ){
-    printf("Speedy: facility cost %lf\n", z);
+    APP_DPRINTF("Speedy: facility cost %lf", z);
   }
-#endif
 
   /* create center at first point, send it to itself */
   for( int k = k1; k < k2; k++ )    {
@@ -297,14 +295,12 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
   pthread_barrier_wait(barrier);
 #endif
 
-#ifdef PRINTINFO
   if( pid == 0 )
     {
-      printf("Speedy opened %ld facilities for total cost %lf\n",
+      APP_DPRINTF("Speedy opened %ld facilities for total cost %lf",
 	      *kcenter, totalcost);
-      printf("Distance Cost %lf\n", totalcost - z*(*kcenter));
+      APP_DPRINTF("Distance Cost %lf", totalcost - z*(*kcenter));
     }
-#endif
 
 #ifdef PROFILE
   double t2 = gettime();
@@ -354,12 +350,12 @@ float pFL(Points *points, int *feasible, int numfeasible,
     }		
 		
     cost -= change;
-#ifdef PRINTINFO
+
     if( pid == 0 ) {
-      printf("%ld centers, cost %lf, total distance %lf\n",
+      APP_DPRINTF("%ld centers, cost %lf, total distance %lf",
 	      *k, cost, cost - z*(*k));
     }
-#endif
+
 #ifdef ENABLE_THREADS
     pthread_barrier_wait(barrier);
 #endif
@@ -472,13 +468,11 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
   long k2 = k1 + bsize;
   if( pid == nproc-1 ) k2 = points->num;
 
-#ifdef PRINTINFO
   if( pid == 0 )
     {
-      printf("Starting Kmedian procedure\n");
-      printf("%ld points in %ld dimensions\n", numberOfPoints, ptDimension);
+      APP_DPRINTF("Starting Kmedian procedure");
+      APP_DPRINTF("%ld points in %ld dimensions", numberOfPoints, ptDimension);
     }
-#endif
 
 #ifdef ENABLE_THREADS
   pthread_barrier_wait(barrier);
@@ -519,10 +513,10 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
   if( pid == 0 ) shuffle(points);
   cost = pspeedy(points, z, &k, pid, barrier);
 
-#ifdef PRINTINFO
   if( pid == 0 )
-    printf("thread %d: Finished first call to speedy, cost=%lf, k=%li\n",pid,cost,k);
-#endif
+    APP_DPRINTF("thread %d: Finished first call to speedy, cost=%lf, k=%li",
+            pid,cost, k);
+
   i=0;
   /* give speedy SP chances to get at least kmin/2 facilities */
   while ((k < kmin)&&(i<SP)) {
@@ -530,18 +524,17 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
     i++;
   }
 
-#ifdef PRINTINFO
   if( pid==0)
-    printf("thread %d: second call to speedy, cost=%lf, k=%ld\n",pid,cost,k);
-#endif 
+    APP_DPRINTF("thread %d: second call to speedy, cost=%lf, k=%ld",
+            pid,cost, k);
+
   /* if still not enough facilities, assume z is too high */
   while (k < kmin) {
-#ifdef PRINTINFO
     if( pid == 0 ) {
-      printf("%lf %lf\n", loz, hiz);
-      printf("Speedy indicates we should try lower z\n");
+      APP_DPRINTF("%lf %lf", loz, hiz);
+      APP_DPRINTF("Speedy indicates we should try lower z");
     }
-#endif
+
     if (i >= SP) {hiz=z; z=(hiz+loz)/2.0; i=0;}
     if( pid == 0 ) shuffle(points);
     cost = pspeedy(points, z, &k, pid, barrier);
@@ -567,13 +560,12 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
 
   while(1) {
   
-#ifdef PRINTINFO
     if( pid==0 )
       {
-        printf("loz = %lf, hiz = %lf\n", loz, hiz);
-        printf("Running Local Search...\n");
+        APP_DPRINTF("loz = %lf, hiz = %lf", loz, hiz);
+        APP_DPRINTF("Running Local Search...");
       }
-#endif
+
     /* first get a rough estimate on the FL solution */
     //    pthread_barrier_wait(barrier);		
     //lastcost = cost;
@@ -584,12 +576,11 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
     if (((k <= (1.1)*kmax)&&(k >= (0.9)*kmin))||
 	((k <= kmax+2)&&(k >= kmin-2))) {
 
-#ifdef PRINTINFO
       if( pid== 0)
 	{
-	  printf("Trying a more accurate local search...\n");
+	  APP_DPRINTF("Trying a more accurate local search...");
 	}
-#endif
+
       /* may need to run a little longer here before halting without
 	 improvement */
 	 
@@ -821,7 +812,8 @@ void streamCluster( PStream* stream,
   while(1) {
 
     size_t numRead  = stream->read(block, dim, chunksize ); 
-    printf("read %lu points\n",numRead);
+    APP_DPRINTF("read %lu points", numRead);
+    fflush(fapp_trace);
 
     if( stream->ferror() || (numRead < (unsigned int)chunksize && !stream->feof()) ) {
       fprintf(stderr, "error reading data!\n");
@@ -841,28 +833,27 @@ void streamCluster( PStream* stream,
     cudaMallocHost((void**) &switch_membership, points.num * sizeof(bool));
     cudaMallocHost((void**) &is_center, points.num * sizeof(bool));
     cudaMallocHost((void**) &center_table, points.num * sizeof(int));
+    memset(switch_membership, 0, points.num * sizeof(bool));
+    memset(is_center, 0, points.num * sizeof(bool));
+    memset(center_table, 0, points.num * sizeof(int));
 
     localSearch(&points,kmin, kmax,&kfinal);
 
-    printf("finish local search\n");
+    APP_DPRINTF("finish local search");
     contcenters(&points);
 
     if( kfinal + centers.num > centersize ) {
       //here we don't handle the situation where # of centers gets too large. 
-      printf("oops! no more space for centers\n");
+      APP_DPRINTF("oops! no more space for centers");
       exit(1);
     }
 
-#ifdef PRINTINFO
-    printf("finish cont center\n");
-#endif
+    APP_DPRINTF("finish cont center");
 
     copycenters(&points, &centers, centerIDs, IDoffset);
     IDoffset += numRead;
 
-#ifdef PRINTINFO
-    printf("finish copy centers\n"); 
-#endif
+    APP_DPRINTF("finish copy centers"); 
 
     /*
     free(is_center);
@@ -895,6 +886,8 @@ void streamCluster( PStream* stream,
 
 int main(int argc, char **argv)
 {
+  fapp_trace = fopen("app_trace.txt", "w");
+    
   char *outfilename = new char[MAXNAMESIZE];
   char *infilename = new char[MAXNAMESIZE];
   long kmin, kmax, n, chunksize, clustersize;
@@ -902,10 +895,10 @@ int main(int argc, char **argv)
 #ifdef PARSEC_VERSION
 #define __PARSEC_STRING(x) #x
 #define __PARSEC_XSTRING(x) __PARSEC_STRING(x)
-        printf("PARSEC Benchmark Suite Version "__PARSEC_XSTRING(PARSEC_VERSION)"\n");
+        APP_DPRINTF("PARSEC Benchmark Suite Version "__PARSEC_XSTRING(PARSEC_VERSION)"");
 	fflush(NULL);
 #else
-        printf("PARSEC Benchmark Suite\n");
+        APP_DPRINTF("PARSEC Benchmark Suite");
 	fflush(NULL);
 #endif //PARSEC_VERSION
 #ifdef ENABLE_PARSEC_HOOKS
@@ -913,19 +906,18 @@ int main(int argc, char **argv)
 #endif
 
   if (argc > 11 || argc < 10) {
-    printf("usage: %s k1 k2 d n chunksize clustersize infile outfile nproc (goldfile)\n",
+    APP_DPRINTF("usage: %s k1 k2 d n chunksize clustersize infile outfile nproc (goldfile)",
 	    argv[0]);
-    printf("  k1:          Min. number of centers allowed\n");
-    printf("  k2:          Max. number of centers allowed\n");
-    printf("  d:           Dimension of each data point\n");
-    printf("  n:           Number of data points\n");
-    printf("  chunksize:   Number of data points to handle per step\n");
-    printf("  clustersize: Maximum number of intermediate centers\n");
-    printf("  infile:      Input file (if n<=0)\n");
-    printf("  outfile:     Output file\n");
-    printf("  nproc:       Number of threads to use\n");
-    printf("  goldfile:    File to verify the output\n");
-    printf("\n");
+    APP_DPRINTF("  k1:          Min. number of centers allowed");
+    APP_DPRINTF("  k2:          Max. number of centers allowed");
+    APP_DPRINTF("  d:           Dimension of each data point");
+    APP_DPRINTF("  n:           Number of data points");
+    APP_DPRINTF("  chunksize:   Number of data points to handle per step");
+    APP_DPRINTF("  clustersize: Maximum number of intermediate centers");
+    APP_DPRINTF("  infile:      Input file (if n<=0)");
+    APP_DPRINTF("  outfile:     Output file");
+    APP_DPRINTF("  nproc:       Number of threads to use");
+    APP_DPRINTF("  goldfile:    File to verify the output");
     printf( "if n > 0, points will be randomly generated instead of reading from infile.\n");
     exit(1);
   }
@@ -976,26 +968,25 @@ int main(int argc, char **argv)
 
   double t2 = gettime();
 
-  printf("time = %lf\n",t2-t1);
+  APP_DPRINTF("time = %lf",t2 - t1);
 
   delete stream;
   
 #ifdef PROFILE
-  printf("time pgain = %lf\n", time_gain);
-  printf("time pgain_dist = %lf\n", time_gain_dist);
-  printf("time pgain_init = %lf\n", time_gain_init);
-  printf("time pselect = %lf\n", time_select_feasible);
-  printf("time pspeedy = %lf\n", time_speedy);
-  printf("time pshuffle = %lf\n", time_shuffle);
-  printf("time localSearch = %lf\n", time_local_search);
-  printf("\n");
-  printf("====GPU Timing info====\n");
-  printf("time serial = %lf\n", serial);
-  printf("time CPU to GPU memory copy = %lf\n", cpu_gpu_memcpy);
-  printf("time GPU to CPU memory copy back = %lf\n", memcpy_back);
-  printf("time GPU malloc = %lf\n", gpu_malloc);
-  printf("time GPU free = %lf\n", gpu_free);
-  printf("time kernel = %lf\n", kernel);
+  APP_DPRINTF("time pgain = %lf", time_gain);
+  APP_DPRINTF("time pgain_dist = %lf", time_gain_dist);
+  APP_DPRINTF("time pgain_init = %lf", time_gain_init);
+  APP_DPRINTF("time pselect = %lf", time_select_feasible);
+  APP_DPRINTF("time pspeedy = %lf", time_speedy);
+  APP_DPRINTF("time pshuffle = %lf", time_shuffle);
+  APP_DPRINTF("time localSearch = %lf", time_local_search);
+  APP_DPRINTF("====GPU Timing info====");
+  APP_DPRINTF("time serial = %lf", serial);
+  APP_DPRINTF("time CPU to GPU memory copy = %lf", cpu_gpu_memcpy);
+  APP_DPRINTF("time GPU to CPU memory copy back = %lf", memcpy_back);
+  APP_DPRINTF("time GPU malloc = %lf", gpu_malloc);
+  APP_DPRINTF("time GPU free = %lf", gpu_free);
+  APP_DPRINTF("time kernel = %lf", kernel);
  #endif
   
 #ifdef ENABLE_PARSEC_HOOKS
@@ -1013,9 +1004,9 @@ int main(int argc, char **argv)
 			}
 		}
 		if((feof(gold)^feof(result)) | result_error) {
-			printf("\nFAILED\n");
+			APP_DPRINTF("\nFAILED");
 		} else {
-			printf("\nPASSED\n");
+			APP_DPRINTF("\nPASSED");
 		}
 
 		fclose(gold);

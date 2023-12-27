@@ -32,6 +32,22 @@
 #include <hooks.h>
 #endif
 
+extern FILE* fapp_trace;
+
+#define PRINTINFO 1			// set this to 0 to disable output
+#if PRINTINFO
+#define APP_DPRINTF(...)                  \
+    do {                                  \
+        fprintf(fapp_trace, __VA_ARGS__); \
+        fprintf(fapp_trace, "\n");        \
+        fflush(fapp_trace);               \
+    } while (0)
+#else
+#define APP_DPRINTF(...) \
+    do {                 \
+    } while (0)
+#endif
+
 using namespace std;
 
 /* this structure represents a point */

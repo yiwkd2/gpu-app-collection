@@ -54,7 +54,20 @@ using namespace std;
 /* higher ITER also scales the running time almost linearly */
 #define ITER 1 // iterate ITER* k log k times; ITER >= 1
 
-#define PRINTINFO //comment this out to disable output
+#define PRINTINFO 1 //comment this out to disable output
+#if PRINTINFO
+#define APP_DPRINTF(...)                  \
+    do {                                  \
+        fprintf(fapp_trace, __VA_ARGS__); \
+        fprintf(fapp_trace, "\n");        \
+        fflush(fapp_trace);               \
+    } while (0)
+#else
+#define APP_DPRINTF(...) \
+    do {                 \
+    } while (0)
+#endif
+
 #define PROFILE // comment this out to disable instrumentation code
 //#define ENABLE_THREADS  // comment this out to disable threads
 //#define INSERT_WASTE //uncomment this to insert waste computation into dist function
@@ -82,6 +95,8 @@ static bool* is_center; //whether a point is a center
 static int* center_table; //index table of centers
 
 static int nproc; //# of threads
+
+FILE* fapp_trace;
 
 // instrumentation code
 #ifdef PROFILE
@@ -218,11 +233,9 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
   static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 #endif
 
-#ifdef PRINTINFO
   if( pid == 0 ){
-    fprintf(stderr, "Speedy: facility cost %lf\n", z);
+    APP_DPRINTF("Speedy: facility cost %lf", z);
   }
-#endif
 
   /* create center at first point, send it to itself */
   for( int k = k1; k < k2; k++ )    {
@@ -324,14 +337,12 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
   pthread_barrier_wait(barrier);
 #endif
 
-#ifdef PRINTINFO
   if( pid == 0 )
     {
-      fprintf(stderr, "Speedy opened %d facilities for total cost %lf\n",
+      APP_DPRINTF("Speedy opened %d facilities for total cost %lf",
 	      *kcenter, totalcost);
-      fprintf(stderr, "Distance Cost %lf\n", totalcost - z*(*kcenter));
+      APP_DPRINTF("Distance Cost %lf", totalcost - z*(*kcenter));
     }
-#endif
 
 #ifdef PROFILE
   double t2 = gettime();
@@ -361,6 +372,8 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
 
 double pgain(long x, Points *points, double z, long int *numcenters, int pid, pthread_barrier_t* barrier)
 {
+  APP_DPRINTF("pgain, numcenters: %ld", *numcenters);
+  
   //  printf("pgain pthread %d begin\n",pid);
 #ifdef ENABLE_THREADS
   pthread_barrier_wait(barrier);
@@ -629,12 +642,11 @@ float pFL(Points *points, int *feasible, int numfeasible,
     }
 
     cost -= change;
-#ifdef PRINTINFO
     if( pid == 0 ) {
-      fprintf(stderr, "%d centers, cost %lf, total distance %lf\n",
+      APP_DPRINTF("%d centers, cost %lf, total distance %lf",
 	      *k, cost, cost - z*(*k));
     }
-#endif
+
 #ifdef ENABLE_THREADS
     pthread_barrier_wait(barrier);
 #endif
@@ -1142,7 +1154,7 @@ void streamCluster( PStream* stream,
   while(1) {
 
     size_t numRead  = stream->read(block, dim, chunksize ); 
-    fprintf(stderr,"read %d points\n",numRead);
+    APP_DPRINTF("read %d points",numRead);
 
     if( stream->ferror() || numRead < (unsigned int)chunksize && !stream->feof() ) {
       fprintf(stderr, "error reading data!\n");
@@ -1160,7 +1172,7 @@ void streamCluster( PStream* stream,
 
     localSearch(&points,kmin, kmax,&kfinal);
 
-    fprintf(stderr,"finish local search\n");
+    APP_DPRINTF("finish local search");
     contcenters(&points);
     if( kfinal + centers.num > centersize ) {
       //here we don't handle the situation where # of centers gets too large. 
@@ -1200,6 +1212,8 @@ void streamCluster( PStream* stream,
 
 int main(int argc, char **argv)
 {
+  fapp_trace = fopen("app_trace.txt", "w");
+
   char *outfilename = new char[MAXNAMESIZE];
   char *infilename = new char[MAXNAMESIZE];
   long kmin, kmax, n, chunksize, clustersize;
@@ -1219,19 +1233,19 @@ int main(int argc, char **argv)
 #endif
 
   if (argc<10) {
-    fprintf(stderr,"usage: %s k1 k2 d n chunksize clustersize infile outfile nproc\n",
+    APP_DPRINTF("usage: %s k1 k2 d n chunksize clustersize infile outfile nproc",
 	    argv[0]);
-    fprintf(stderr,"  k1:          Min. number of centers allowed\n");
-    fprintf(stderr,"  k2:          Max. number of centers allowed\n");
-    fprintf(stderr,"  d:           Dimension of each data point\n");
-    fprintf(stderr,"  n:           Number of data points\n");
-    fprintf(stderr,"  chunksize:   Number of data points to handle per step\n");
-    fprintf(stderr,"  clustersize: Maximum number of intermediate centers\n");
-    fprintf(stderr,"  infile:      Input file (if n<=0)\n");
-    fprintf(stderr,"  outfile:     Output file\n");
-    fprintf(stderr,"  nproc:       Number of threads to use\n");
-    fprintf(stderr,"\n");
-    fprintf(stderr, "if n > 0, points will be randomly generated instead of reading from infile.\n");
+    APP_DPRINTF("  k1:          Min. number of centers allowed");
+    APP_DPRINTF("  k2:          Max. number of centers allowed");
+    APP_DPRINTF("  d:           Dimension of each data point");
+    APP_DPRINTF("  n:           Number of data points");
+    APP_DPRINTF("  chunksize:   Number of data points to handle per step");
+    APP_DPRINTF("  clustersize: Maximum number of intermediate centers");
+    APP_DPRINTF("  infile:      Input file (if n<=0)");
+    APP_DPRINTF("  outfile:     Output file");
+    APP_DPRINTF("  nproc:       Number of threads to use");
+    APP_DPRINTF(" ");
+    APP_DPRINTF("if n > 0, points will be randomly generated instead of reading from infile.");
     exit(1);
   }
   kmin = atoi(argv[1]);

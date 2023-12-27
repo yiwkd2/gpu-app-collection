@@ -133,8 +133,7 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 	int num    =   points->num;				// number of points
 	int dim     =   points->dim;				// number of dimension
 	kmax++;
-	
-	
+
 	/***** build center index table *****/
 	int count = 0;
 	for( int i=0; i<num; i++){
@@ -147,7 +146,7 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 	*serial += t2 - t1;
 #endif
 	
-	
+
 	/***** initial memory allocation and preparation for transfer : execute once *****/
 	if( c == 0 ) {
 #ifdef PROFILE
@@ -212,7 +211,8 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 #ifdef PROFILE
 	double t9 = gettime();
 #endif
-	pgain_kernel<<< grid_size, THREADS_PER_BLOCK,  smSize>>>(	
+
+	pgain_kernel<<< grid_size, THREADS_PER_BLOCK,  smSize>>>(
 																											num,								// in:	# of data
 																											dim,									// in:	dimension of point coordinates
 																											x,										// in:	point to open a center at
@@ -268,7 +268,6 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 		gl_cost += work_mem_h[i*(K+1)+K];
 	}
 	
-	
 	/* if opening a center at x saves cost (i.e. cost is negative) do so
 		otherwise, do nothing */
 	if ( gl_cost < 0 ) {
@@ -297,5 +296,6 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 	*serial += t12 - t11;
 #endif
 	c++;
+
 	return -gl_cost;
 }
