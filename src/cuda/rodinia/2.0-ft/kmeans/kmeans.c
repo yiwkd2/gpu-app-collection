@@ -33,10 +33,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <limits.h>
 #include <math.h>
-#include  <fcntl.h>
+#include <fcntl.h>
+#include <assert.h>
 
 #include "kmeans.h"
 #include <getopt.h>
@@ -62,7 +64,7 @@ void usage(char *argv0) {
 /*---< main() >-------------------------------------------------------------*/
 int setup(int argc, char **argv) {
 		int		opt;
- extern char   *optarg;
+// extern char   *optarg;
 		char   *filename = 0;
 		char   *goldfile = 0;
 		float  *buf;
@@ -86,7 +88,7 @@ int setup(int argc, char **argv) {
 		float	rmse;
 		
 		int		isOutput = 0;
-		float	cluster_timing, io_timing;		
+		float	cluster_timing = 0.0, io_timing = 0.0;
 
 		/* obtain command line arguments and change appropriate options */
 		while ( (opt=getopt(argc,argv,"i:t:m:n:l:g:bro"))!= EOF) {
@@ -129,8 +131,17 @@ int setup(int argc, char **argv) {
             fprintf(stderr, "Error: no such file (%s)\n", filename);
             exit(1);
         }
-        read(infile, &npoints,   sizeof(int));
-        read(infile, &nfeatures, sizeof(int));        
+        if (read(infile, &npoints,   sizeof(int)) != sizeof(int)) {
+            fprintf(stderr, "Unexpected number of bytes read\n");
+            close(infile);
+            assert(0);
+        }
+
+        if (read(infile, &nfeatures, sizeof(int)) != sizeof(int)) {
+            fprintf(stderr, "Unexpected number of bytes read\n");
+            close(infile);
+            assert(0);
+        }
 
         /* allocate space for features[][] and read attributes of all objects */
         buf         = (float*) malloc(npoints*nfeatures*sizeof(float));
@@ -139,7 +150,11 @@ int setup(int argc, char **argv) {
         for (i=1; i<npoints; i++)
             features[i] = features[i-1] + nfeatures;
 
-        read(infile, buf, npoints*nfeatures*sizeof(float));
+        if (read(infile, buf, npoints*nfeatures*sizeof(float)) != (ssize_t) (npoints*nfeatures*sizeof(float))) {
+            fprintf(stderr, "Unexpected number of bytes read\n");
+            close(infile);
+            assert(0);
+        }
 
         close(infile);
     }

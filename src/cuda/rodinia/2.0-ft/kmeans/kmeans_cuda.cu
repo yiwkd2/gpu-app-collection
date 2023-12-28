@@ -13,6 +13,7 @@
 #define THREADS_PER_BLOCK THREADS_PER_DIM*THREADS_PER_DIM
 
 #include <kmeans_cuda_kernel.cu>
+#include <kmeans.h>
 
 
 //#define BLOCK_DELTA_REDUCE
@@ -20,9 +21,6 @@
 
 #define CPU_DELTA_REDUCE
 #define CPU_CENTER_REDUCE
-
-extern "C"
-int setup(int argc, char** argv);									/* function prototype */
 
 // GLOBAL!!!!!
 unsigned int num_threads_perdim = THREADS_PER_DIM;					/* sqrt(256) -- see references for this choice */
@@ -45,7 +43,7 @@ int    *block_deltas_d;												/* per block calculation of deltas */
 /* allocate device memory, calculate number of blocks and threads, and invert the data array */
 extern "C"
 void allocateMemory(int npoints, int nfeatures, int nclusters, float **features)
-{	
+{
 	num_blocks = npoints / num_threads;
 	if (npoints % num_threads > 0)		/* defeat truncation */
 		num_blocks++;
@@ -151,7 +149,7 @@ kmeansCuda(float  **feature,				/* in: [npoints][nfeatures] */
 	int delta = 0;			/* if point has moved */
 	int i,j;				/* counters */
 
-	double time_mem, time_kernel, time_back;
+//  double time_mem, time_kernel, time_back;
 
 //	time_mem = omp_get_wtime();
 
@@ -163,7 +161,56 @@ kmeansCuda(float  **feature,				/* in: [npoints][nfeatures] */
 	/* copy clusters (host to device) */
 	cudaMemcpy(clusters_d, clusters[0], nclusters*nfeatures*sizeof(float), cudaMemcpyHostToDevice);
 
+    /* textureObject */
+    cudaResourceDesc resDesc0;
+    memset(&resDesc0, 0, sizeof(resDesc0));
+    resDesc0.resType = cudaResourceTypeLinear;
+    resDesc0.res.linear.devPtr = feature_d;
+    resDesc0.res.linear.desc.f = cudaChannelFormatKindFloat;
+    resDesc0.res.linear.desc.x = 32;
+    resDesc0.res.linear.sizeInBytes = npoints * nfeatures * sizeof(float);
+
+    cudaTextureDesc texDesc0;
+    memset(&texDesc0, 0, sizeof(texDesc0));
+    texDesc0.readMode = cudaReadModeElementType;
+
+    cudaTextureObject_t t_features=0;
+    cudaCreateTextureObject(&t_features, &resDesc0, &texDesc0, NULL);
+
+    cudaResourceDesc resDesc1;
+    memset(&resDesc1, 0, sizeof(resDesc1));
+    resDesc1.resType = cudaResourceTypeLinear;
+    resDesc1.res.linear.devPtr = feature_flipped_d;
+    resDesc1.res.linear.desc.f = cudaChannelFormatKindFloat;
+    resDesc1.res.linear.desc.x = 32;
+    resDesc1.res.linear.sizeInBytes = npoints * nfeatures * sizeof(float);
+    
+    cudaTextureDesc texDesc1;
+    memset(&texDesc1, 0, sizeof(texDesc1));
+    texDesc1.readMode = cudaReadModeElementType;
+
+    cudaTextureObject_t t_features_flipped=0;
+    cudaCreateTextureObject(&t_features_flipped, &resDesc1, &texDesc1, NULL);
+
+    /*
+    cudaResourceDesc resDesc2;
+    memset(&resDesc2, 0, sizeof(resDesc2));
+    resDesc2.resType = cudaResourceTypeLinear;
+    resDesc2.res.linear.devPtr = clusters_d;
+    resDesc2.res.linear.desc.f = cudaChannelFormatKindFloat;
+    resDesc2.res.linear.desc.x = 32;
+    resDesc2.res.linear.sizeInBytes = nclusters * nfeatures * sizeof(float);
+    
+    cudaTextureDesc texDesc2;
+    memset(&texDesc2, 0, sizeof(texDesc2));
+    texDesc2.readMode = cudaReadModeElementType;
+
+    cudaTextureObject_t t_clusters=0;
+    cudaCreateTextureObject(&t_clusters, &resDesc2, &texDesc2, NULL);
+    */
+
 	/* set up texture */
+    /*
     cudaChannelFormatDesc chDesc0 = cudaCreateChannelDesc<float>();
     t_features.filterMode = cudaFilterModePoint;   
     t_features.normalized = false;
@@ -187,6 +234,7 @@ kmeansCuda(float  **feature,				/* in: [npoints][nfeatures] */
 
 	if(cudaBindTexture(NULL, &t_clusters, clusters_d, &chDesc2, nclusters*nfeatures*sizeof(float)) != CUDA_SUCCESS)
         printf("Couldn't bind clusters array to texture!\n");
+    */
 
 	/* copy clusters to constant memory */
 	cudaMemcpyToSymbol(c_clusters,clusters[0],nclusters*nfeatures*sizeof(float),0,cudaMemcpyHostToDevice);
@@ -207,9 +255,11 @@ kmeansCuda(float  **feature,				/* in: [npoints][nfeatures] */
                                       membership_d,
                                       clusters_d,
 									  block_clusters_d,
-									  block_deltas_d);
+									  block_deltas_d,
+                                      t_features,
+                                      t_features_flipped);
 
-	cudaThreadSynchronize();
+	//cudaThreadSynchronize();
 //	time_kernel = omp_get_wtime() - time_kernel;
 
 //	time_back = omp_get_wtime();
