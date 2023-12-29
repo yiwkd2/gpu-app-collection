@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <float.h>
 #include <math.h>
+#include <assert.h>
 
 #include "kmeans.h"
 
@@ -42,11 +43,11 @@ int find_nearest_point(float  *pt,          /* [nfeatures] */
                        float  **pts,         /* [npts][nfeatures] */
                        int     npts)
 {
-    int index, i;
+    int index = -1;
     float max_dist=FLT_MAX;
 
     /* find the cluster center id with min distance to pt */
-    for (i=0; i<npts; i++) {
+    for (int i = 0; i < npts; i++) {
         float dist;
         dist = euclid_dist_2(pt, pts[i], nfeatures);  /* no need square root */
         if (dist < max_dist) {
@@ -54,6 +55,9 @@ int find_nearest_point(float  *pt,          /* [nfeatures] */
             index    = i;
         }
     }
+
+    assert(index >= 0);
+
     return(index);
 }
 

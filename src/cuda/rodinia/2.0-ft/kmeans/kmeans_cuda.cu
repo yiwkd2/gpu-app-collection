@@ -362,6 +362,9 @@ kmeansCuda(float  **feature,				/* in: [npoints][nfeatures] */
 
 	//printf("Memcpy took %f,\nkernel took %f,\nMemcpy back took %f\n", time_mem, time_kernel, time_back);
 
+    cudaDestroyTextureObject(t_features);
+    cudaDestroyTextureObject(t_features_flipped);
+
 	return delta;
 	
 }
