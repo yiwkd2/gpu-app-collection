@@ -55,13 +55,17 @@ void allocateMemory(int npoints, int nfeatures, int nclusters, float **features)
 	num_blocks = num_blocks_perdim*num_blocks_perdim;
 
 	/* allocate memory for memory_new[] and initialize to -1 (host) */
-	membership_new = (int*) malloc(npoints * sizeof(int));
+	//membership_new = (int*) malloc(npoints * sizeof(int));
+    cudaMallocHost((void**) &membership_new, npoints * sizeof(int));
+    memset(membership_new, 0, npoints * sizeof(int));
 	for(int i=0;i<npoints;i++) {
 		membership_new[i] = -1;
 	}
 
 	/* allocate memory for block_new_centers[] (host) */
-	block_new_centers = (float *) malloc(nclusters*nfeatures*sizeof(float));
+	//block_new_centers = (float *) malloc(nclusters*nfeatures*sizeof(float));
+    cudaMallocHost((void**) &block_new_centers, nclusters * nfeatures * sizeof(float));
+    memset(block_new_centers, 0, nclusters * nfeatures *  sizeof(float));
 	
 	/* allocate memory for feature_flipped_d[][], feature_d[][] (device) */
 	cudaMalloc((void**) &feature_flipped_d, npoints*nfeatures*sizeof(float));
@@ -99,8 +103,10 @@ void allocateMemory(int npoints, int nfeatures, int nclusters, float **features)
 extern "C"
 void deallocateMemory()
 {
-	free(membership_new);
-	free(block_new_centers);
+	//free(membership_new);
+	//free(block_new_centers);
+    cudaFreeHost(membership_new);
+    cudaFreeHost(block_new_centers);
 	cudaFree(feature_d);
 	cudaFree(feature_flipped_d);
 	cudaFree(membership_d);
@@ -267,9 +273,14 @@ kmeansCuda(float  **feature,				/* in: [npoints][nfeatures] */
 	cudaMemcpy(membership_new, membership_d, npoints*sizeof(int), cudaMemcpyDeviceToHost);	
 #ifdef BLOCK_CENTER_REDUCE
     /*** Copy back arrays of per block sums ***/
-    float * block_clusters_h = (float *) malloc(
-        num_blocks_perdim * num_blocks_perdim * 
-        nclusters * nfeatures * sizeof(float));
+    //float * block_clusters_h = (float *) malloc(
+    //    num_blocks_perdim * num_blocks_perdim * 
+    //    nclusters * nfeatures * sizeof(float));
+    float * block_clusters_h;
+    cudaMallocHost((void**) block_clusters_h, num_blocks_perdim *
+            num_blocks_perdim * nclusters * nfeatures * sizeof(float));
+    memset(block_clusters_h, 0, num_blocks_perdim * num_blocks_perdim *
+            nclusters * nfeatures * sizeof(float));
         
 	cudaMemcpy(block_clusters_h, block_clusters_d, 
         num_blocks_perdim * num_blocks_perdim * 
@@ -277,8 +288,12 @@ kmeansCuda(float  **feature,				/* in: [npoints][nfeatures] */
         cudaMemcpyDeviceToHost);
 #endif
 #ifdef BLOCK_DELTA_REDUCE
-    int * block_deltas_h = (int *) malloc(
-        num_blocks_perdim * num_blocks_perdim * sizeof(int));
+    //int * block_deltas_h = (int *) malloc(
+    //    num_blocks_perdim * num_blocks_perdim * sizeof(int));
+    int * block_deltas_h;
+    cudaMallocHost((void**) &block_deltas_h, num_blocks_perdim * num_blocks_perdim *
+            sizeof(int));
+    memset(block_deltas_h, 0, num_blocks_perdim * num_blocks_perdim * sizeof(int));
         
 	cudaMemcpy(block_deltas_h, block_deltas_d, 
         num_blocks_perdim * num_blocks_perdim * sizeof(int), 
@@ -319,6 +334,8 @@ kmeansCuda(float  **feature,				/* in: [npoints][nfeatures] */
 		//printf("block %d delta is %d \n",i,block_deltas_h[i]);
         delta += block_deltas_h[i];
     }
+
+    cudaFreeHost(block_deltas_h);
         
 #endif
 #ifdef BLOCK_CENTER_REDUCE	
@@ -336,6 +353,8 @@ kmeansCuda(float  **feature,				/* in: [npoints][nfeatures] */
 			}
 		}
     }
+
+    cudaFreeHost(block_clusters_h);
 	
 
 #ifdef CPU_CENTER_REDUCE

@@ -32,6 +32,7 @@
 #include <limits.h>
 #include <math.h>
 #include <float.h>
+#include <cuda_runtime.h>
 
 #include "kmeans.h"
 
@@ -56,11 +57,13 @@ int cluster(int      npoints,				/* number of data points */
 	int		index =0;						/* number of iteration to reach the best RMSE */
 	int		rmse;							/* RMSE for each clustering */
     int    *membership;						/* which cluster a data point belongs to */
-    float **tmp_cluster_centres;			/* hold coordinates of cluster centers */
+    float **tmp_cluster_centres = NULL;		/* hold coordinates of cluster centers */
 	int		i;
 
 	/* allocate memory for membership */
-    membership = (int*) malloc(npoints * sizeof(int));
+    //membership = (int*) malloc(npoints * sizeof(int));
+    cudaMallocHost((void**) &membership, npoints * sizeof(int));
+    memset(membership, 0, npoints * sizeof(int));
 
 	/* sweep k from min to max_nclusters to find the best number of clusters */
 	for(nclusters = min_nclusters; nclusters <= max_nclusters; nclusters++)
@@ -82,8 +85,10 @@ int cluster(int      npoints,				/* number of data points */
 													membership);
 
 			if (*cluster_centres) {
-				free((*cluster_centres)[0]);
-				free(*cluster_centres);
+				//free((*cluster_centres)[0]);
+				//free(*cluster_centres);
+                cudaFreeHost((*cluster_centres)[0]);
+                cudaFreeHost(*cluster_centres);
 			}
 			*cluster_centres = tmp_cluster_centres;
 	        
@@ -105,11 +110,15 @@ int cluster(int      npoints,				/* number of data points */
 				}
 			}			
 		}
+
+        cudaFreeHost(tmp_cluster_centres[0]);
+        cudaFreeHost(tmp_cluster_centres);
 		
 		deallocateMemory();							/* free device memory (@ kmeans_cuda.cu) */
 	}
 
-    free(membership);
+    //free(membership);
+    cudaFreeHost(membership);
 
     return index;
 }

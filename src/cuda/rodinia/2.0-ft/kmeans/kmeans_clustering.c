@@ -26,6 +26,8 @@
 #include <stdlib.h>
 #include <float.h>
 #include <math.h>
+#include <cuda_runtime.h>
+#include <string.h>
 
 #include "kmeans.h"
 
@@ -62,14 +64,20 @@ float** kmeans_clustering(float **feature,    /* in: [npoints][nfeatures] */
 		nclusters = npoints;
 
     /* allocate space for and initialize returning variable clusters[] */
-    clusters    = (float**) malloc(nclusters *             sizeof(float*));
-    clusters[0] = (float*)  malloc(nclusters * nfeatures * sizeof(float));
+    //clusters    = (float**) malloc(nclusters *             sizeof(float*));
+    //clusters[0] = (float*)  malloc(nclusters * nfeatures * sizeof(float));
+    cudaMallocHost((void**) &clusters, nclusters * sizeof(float*));
+    memset(clusters, 0, nclusters * sizeof(float*));
+    cudaMallocHost((void**) &clusters[0], nclusters * nfeatures * sizeof(float));
+    memset(clusters[0], 0, nclusters * nfeatures * sizeof(float));
+
     for (i=1; i<nclusters; i++) {
         clusters[i] = clusters[i-1] + nfeatures;
     }
 
 	/* initialize the random clusters */
-	initial = (int *) malloc (npoints * sizeof(int));
+	//initial = (int *) malloc (npoints * sizeof(int));
+    cudaMallocHost((void**) &initial, npoints * sizeof(int));
 	for (i = 0; i < npoints; i++) {
 		initial[i] = i;
 	}
@@ -91,15 +99,23 @@ float** kmeans_clustering(float **feature,    /* in: [npoints][nfeatures] */
 		n++;
     }
 
+    cudaFreeHost(initial);
+
 	/* initialize the membership to -1 for all */
     for (i=0; i < npoints; i++)
 	  membership[i] = -1;
 
     /* allocate space for and initialize new_centers_len and new_centers */
-    new_centers_len = (int*) calloc(nclusters, sizeof(int));
+    //new_centers_len = (int*) calloc(nclusters, sizeof(int));
+    cudaMallocHost((void**) &new_centers_len, nclusters * sizeof(int));
+    memset(new_centers_len, 0, nclusters * sizeof(int));
 
-    new_centers    = (float**) malloc(nclusters *            sizeof(float*));
-    new_centers[0] = (float*)  calloc(nclusters * nfeatures, sizeof(float));
+    //new_centers    = (float**) malloc(nclusters *            sizeof(float*));
+    cudaMallocHost((void**) &new_centers, nclusters * sizeof(float*));
+    memset(new_centers, 0, nclusters * sizeof(float*));
+    //new_centers[0] = (float*)  calloc(nclusters * nfeatures, sizeof(float));
+    cudaMallocHost((void**) &new_centers[0], nclusters * nfeatures * sizeof(float));
+    memset(new_centers[0], 0, nclusters * nfeatures * sizeof(float));
     for (i=1; i<nclusters; i++) {
         new_centers[i] = new_centers[i-1] + nfeatures;
     }
@@ -131,9 +147,14 @@ float** kmeans_clustering(float **feature,    /* in: [npoints][nfeatures] */
 		c++;
     } while ((delta > threshold) && (loop++ < 500));	/* makes sure loop terminates */
 	printf("iterated %d times\n", c);
+    /*
     free(new_centers[0]);
     free(new_centers);
     free(new_centers_len);
+    */
+    cudaFreeHost(new_centers[0]);
+    cudaFreeHost(new_centers);
+    cudaFreeHost(new_centers_len);
 
     return clusters;
 }

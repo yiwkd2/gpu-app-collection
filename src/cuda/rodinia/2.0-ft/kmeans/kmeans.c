@@ -39,6 +39,7 @@
 #include <math.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <cuda_runtime.h>
 
 #include "kmeans.h"
 #include <getopt.h>
@@ -144,9 +145,18 @@ int setup(int argc, char **argv) {
         }
 
         /* allocate space for features[][] and read attributes of all objects */
+        /*
         buf         = (float*) malloc(npoints*nfeatures*sizeof(float));
         features    = (float**)malloc(npoints*          sizeof(float*));
         features[0] = (float*) malloc(npoints*nfeatures*sizeof(float));
+        */
+        cudaMallocHost((void**) &buf, npoints * nfeatures * sizeof(float));
+        memset(buf, 0, npoints * nfeatures * sizeof(float));
+        cudaMallocHost((void**) &features, npoints * sizeof(float*));
+        memset(features, 0, npoints * sizeof(float*));
+        cudaMallocHost((void**) &features[0], npoints * nfeatures * sizeof(float));
+        memset(features[0], 0, npoints * nfeatures * sizeof(float));
+
         for (i=1; i<npoints; i++)
             features[i] = features[i-1] + nfeatures;
 
@@ -177,9 +187,18 @@ int setup(int argc, char **argv) {
         }        
 
         /* allocate space for features[] and read attributes of all objects */
+        /*
         buf         = (float*) malloc(npoints*nfeatures*sizeof(float));
         features    = (float**)malloc(npoints*          sizeof(float*));
         features[0] = (float*) malloc(npoints*nfeatures*sizeof(float));
+        */
+        cudaMallocHost((void**) &buf, npoints * nfeatures * sizeof(float));
+        memset(buf, 0, npoints * nfeatures * sizeof(float));
+        cudaMallocHost((void**) &features, npoints * sizeof(float*));
+        memset(features, 0, npoints * sizeof(float*));
+        cudaMallocHost((void**) &features[0], npoints * nfeatures * sizeof(float));
+        memset(features[0], 0, npoints * nfeatures * sizeof(float));
+
         for (i=1; i<npoints; i++)
             features[i] = features[i-1] + nfeatures;
         rewind(infile);
@@ -207,7 +226,8 @@ int setup(int argc, char **argv) {
 	}
 
 	memcpy(features[0], buf, npoints*nfeatures*sizeof(float)); /* now features holds 2-dimensional array of features */
-	free(buf);
+	//free(buf);
+    cudaFreeHost(buf);
 
 	/* ======================= core of the clustering ===================*/
 
@@ -277,8 +297,10 @@ int setup(int argc, char **argv) {
 	
 
 	/* free up memory */
-	free(features[0]);
-	free(features);
+	//free(features[0]);
+	//free(features);
+    cudaFreeHost(features[0]);
+    cudaFreeHost(features);
 
 	FILE* res = fopen("result.txt", "r");
 	FILE* gold = fopen(goldfile, "r");
