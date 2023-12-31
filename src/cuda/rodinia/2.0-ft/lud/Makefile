@@ -39,6 +39,7 @@ EXECUTABLE	:= lud-rodinia-2.0-ft
 CUFILES		:= lud.cu lud_kernel.cu
 # CUDA dependency files
 CU_DEPS		:=
+#gpudbg=1
 
 # C/C++ source files (compiled with gcc / c++)
 CFILES		:= common.c 

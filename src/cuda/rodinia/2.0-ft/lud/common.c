@@ -53,6 +53,7 @@ create_matrix_from_file(float **mp, const char* filename, int *size_p){
 
   //m = (float*) malloc(sizeof(float)*size*size);
   cudaMallocHost((void**) &m, size * size * sizeof(float));
+  memset(m, 0, size * size * sizeof(float));
   if ( m == NULL) {
       fclose(fp);
       return RET_FAILURE;
@@ -80,10 +81,12 @@ create_matrix_from_random(float **mp, int size){
   srand(time(NULL));
 
   l = (float*)malloc(size*size*sizeof(float));
+  memset(l, 0, size * size * sizeof(float));
   if ( l == NULL)
     return RET_FAILURE;
 
   u = (float*)malloc(size*size*sizeof(float));
+  memset(u, 0, size * size * sizeof(float));
   if ( u == NULL) {
       free(l);
       return RET_FAILURE;
@@ -141,6 +144,7 @@ void
 lud_verify(float *m, float *lu, int matrix_dim, int brief_msg){
   int i,j,k;
   float *tmp = (float*)malloc(matrix_dim*matrix_dim*sizeof(float));
+  memset(tmp, 0, matrix_dim * matrix_dim * sizeof(float));
 
   for (i=0; i < matrix_dim; i ++)
     for (j=0; j< matrix_dim; j++) {
@@ -158,41 +162,41 @@ lud_verify(float *m, float *lu, int matrix_dim, int brief_msg){
     }
 
   if (!brief_msg) {
-    printf(">>>>>LU<<<<<<<\n");
+    APP_DPRINTF(">>>>>LU<<<<<<<\n");
     for (i=0; i<matrix_dim; i++){
       for (j=0; j<matrix_dim;j++){
-          printf("%f ", lu[i*matrix_dim+j]);
+          APP_DPRINTF("%f ", lu[i*matrix_dim+j]);
       }
-      printf("\n");
+      APP_DPRINTF("\n");
     }
-    printf(">>>>>result<<<<<<<\n");
+    APP_DPRINTF(">>>>>result<<<<<<<\n");
     for (i=0; i<matrix_dim; i++){
       for (j=0; j<matrix_dim;j++){
-          printf("%f ", tmp[i*matrix_dim+j]);
+          APP_DPRINTF("%f ", tmp[i*matrix_dim+j]);
       }
-      printf("\n");
+      APP_DPRINTF("\n");
     }
-    printf(">>>>>input<<<<<<<\n");
+    APP_DPRINTF(">>>>>input<<<<<<<\n");
     for (i=0; i<matrix_dim; i++){
       for (j=0; j<matrix_dim;j++){
-          printf("%f ", m[i*matrix_dim+j]);
+          APP_DPRINTF("%f ", m[i*matrix_dim+j]);
       }
-      printf("\n");
+      APP_DPRINTF("\n");
     }
   }
 	int error=0;
   for (i=0; i<matrix_dim; i++){
       for (j=0; j<matrix_dim; j++){
           if ( fabs(m[i*matrix_dim+j]-tmp[i*matrix_dim+j]) > 0.0001){
-            printf("mismatch at (%d, %d): (o)%f (n)%f\n", i, j, m[i*matrix_dim+j], tmp[i*matrix_dim+j]);
+            APP_DPRINTF("mismatch at (%d, %d): (o)%f (n)%f\n", i, j, m[i*matrix_dim+j], tmp[i*matrix_dim+j]);
 			error=1;
 		  }
       }
   }
   if (!error) {
-	  printf("\nPASSED\n");
+	  APP_DPRINTF("\nPASSED\n");
   } else {
-	  printf("\nFAILED\n");
+	  APP_DPRINTF("\nFAILED\n");
   }
   free(tmp);
 }
@@ -210,7 +214,7 @@ print_matrix(float *m, int matrix_dim) {
     int i, j;
     for (i=0; i<matrix_dim;i++) {
       for (j=0; j<matrix_dim;j++)
-        printf("%f ", m[i*matrix_dim+j]);
-      printf("\n");
+        APP_DPRINTF("%f ", m[i*matrix_dim+j]);
+      APP_DPRINTF("\n");
     }
 }

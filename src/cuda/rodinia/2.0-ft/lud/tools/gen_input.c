@@ -26,6 +26,9 @@ int main (int argc, char **argv){
     L = (FP_NUMBER **) malloc(sizeof(FP_NUMBER*)*MatrixDim);
     U = (FP_NUMBER **) malloc(sizeof(FP_NUMBER*)*MatrixDim);
     A = (FP_NUMBER **) malloc(sizeof(FP_NUMBER*)*MatrixDim);
+    memset(L, 0, MatrixDim * sizeof(FP_NUMBER*));
+    memset(U, 0, MatrixDim * sizeof(FP_NUMBER*));
+    memset(A, 0, MatrixDim * sizeof(FP_NUMBER*));
 
     if ( !L || !U || !A){
         printf("Can not allocate memory\n");
@@ -62,6 +65,9 @@ int main (int argc, char **argv){
         L[i]=(FP_NUMBER*)malloc(sizeof(FP_NUMBER)*MatrixDim);
         U[i]=(FP_NUMBER*)malloc(sizeof(FP_NUMBER)*MatrixDim);
         A[i]=(FP_NUMBER*)malloc(sizeof(FP_NUMBER)*MatrixDim);
+        memset(L[i], 0, MatrixDim * sizeof(FP_NUMBER));
+        memset(U[i], 0, MatrixDim * sizeof(FP_NUMBER));
+        memset(A[i], 0, MatrixDim * sizeof(FP_NUMBER));
     }
 #if 1
 #pragma omp parallel for default(none)\

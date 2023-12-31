@@ -1,5 +1,6 @@
 #include <cuda.h>
 #include <stdio.h>
+#include <common.h>
 
 #define BLOCK_SIZE 16
 
@@ -15,21 +16,21 @@ lud_diagonal(float *m, int matrix_dim, int offset)
     array_offset += matrix_dim;
   }
   __syncthreads();
-
   for(i=0; i < BLOCK_SIZE-1; i++) {
 
     if (threadIdx.x>i){
       for(j=0; j < i; j++)
         shadow[threadIdx.x][i] -= shadow[threadIdx.x][j]*shadow[j][i];
       shadow[threadIdx.x][i] /= shadow[i][i];
+    }
 
-      __syncthreads();
+    __syncthreads();
+    if (threadIdx.x>i){
 
       for(j=0; j < i+1; j++)
         shadow[i+1][threadIdx.x] -= shadow[i+1][j]*shadow[j][threadIdx.x];
-
-      __syncthreads();
     }
+    __syncthreads();
   }
 
   /* 
@@ -88,12 +89,15 @@ lud_perimeter(float *m, int matrix_dim, int offset)
   }
   __syncthreads();
 
+/* this version works ok on hardware, but not gpgpusim
+ **************************************************************
   if (threadIdx.x < BLOCK_SIZE) { //peri-row
     idx=threadIdx.x;
     for(i=1; i < BLOCK_SIZE; i++){
       for (j=0; j < i; j++)
         peri_row[i][idx]-=dia[i][j]*peri_row[j][idx];
     }
+
     
     array_offset = (offset+1)*matrix_dim+offset;
     for(i=1; i < BLOCK_SIZE; i++){
@@ -110,6 +114,39 @@ lud_perimeter(float *m, int matrix_dim, int offset)
 
     __syncthreads();
     
+    array_offset = (offset+(blockIdx.x+1)*BLOCK_SIZE)*matrix_dim+offset;
+    for(i=0; i < BLOCK_SIZE; i++){
+      m[array_offset+idx] =  peri_col[i][idx];
+      array_offset += matrix_dim;
+    }
+  }
+***************************************************************/
+  if (threadIdx.x < BLOCK_SIZE) { //peri-row
+    idx=threadIdx.x;
+    for(i=1; i < BLOCK_SIZE; i++){
+      for (j=0; j < i; j++)
+        peri_row[i][idx]-=dia[i][j]*peri_row[j][idx];
+    }
+  } else { //peri-col
+    idx=threadIdx.x - BLOCK_SIZE;
+    for(i=0; i < BLOCK_SIZE; i++){
+      for(j=0; j < i; j++)
+        peri_col[idx][i]-=peri_col[idx][j]*dia[j][i];
+      peri_col[idx][i] /= dia[i][i];
+    }
+  }
+
+  __syncthreads();
+    
+  if (threadIdx.x < BLOCK_SIZE) { //peri-row
+    idx=threadIdx.x;
+    array_offset = (offset+1)*matrix_dim+offset;
+    for(i=1; i < BLOCK_SIZE; i++){
+      m[array_offset+(blockIdx.x+1)*BLOCK_SIZE+idx] = peri_row[i][idx];
+      array_offset += matrix_dim;
+    }
+  } else { //peri-col
+    idx=threadIdx.x - BLOCK_SIZE;
     array_offset = (offset+(blockIdx.x+1)*BLOCK_SIZE)*matrix_dim+offset;
     for(i=0; i < BLOCK_SIZE; i++){
       m[array_offset+idx] =  peri_col[i][idx];
@@ -149,7 +186,6 @@ void lud_cuda(float *m, int matrix_dim)
 {
   int i=0;
   dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-  float *m_debug = (float*)malloc(matrix_dim*matrix_dim*sizeof(float));
 
   for (i=0; i < matrix_dim-BLOCK_SIZE; i += BLOCK_SIZE) {
       lud_diagonal<<<1, BLOCK_SIZE>>>(m, matrix_dim, i);
@@ -159,4 +195,3 @@ void lud_cuda(float *m, int matrix_dim)
   }
   lud_diagonal<<<1,BLOCK_SIZE>>>(m, matrix_dim, i);
 }
-

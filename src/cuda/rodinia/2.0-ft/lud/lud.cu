@@ -25,6 +25,8 @@
 
 #include "common.h"
 
+FILE* fapp_trace;
+
 static int do_verify = 0;
 static int brief_msg = 0;
 
@@ -44,6 +46,8 @@ lud_cuda(float *d_m, int matrix_dim);
 int
 main ( int argc, char *argv[] )
 {
+  fapp_trace = fopen("app_trace.txt", "w");
+
   int matrix_dim = 32; /* default matrix_dim */
   int opt, option_index=0;
   func_ret_t ret;
@@ -87,7 +91,7 @@ main ( int argc, char *argv[] )
   }
 
   if (input_file) {
-      printf("Reading matrix from file %s\n", input_file);
+      APP_DPRINTF("Reading matrix from file %s\n", input_file);
       ret = create_matrix_from_file(&m, input_file, &matrix_dim);
       if (ret != RET_SUCCESS) {
           m = NULL;
@@ -95,13 +99,14 @@ main ( int argc, char *argv[] )
           exit(EXIT_FAILURE);
       }
   } else {
-    printf("No input file specified!\n");
+    APP_DPRINTF("No input file specified!\n");
     exit(EXIT_FAILURE);
   }
 
   if (do_verify){
     if (!brief_msg) {
-      printf("Before LUD\n");
+      APP_DPRINTF("Before LUD\n");
+      fflush(stdout);
       print_matrix(m, matrix_dim);
     }
     matrix_duplicate(m, &mm, matrix_dim);
@@ -122,17 +127,17 @@ main ( int argc, char *argv[] )
 
   /* end of timing point */
   stopwatch_stop(&sw);
-  printf("Time consumed(ms): %lf\n", 1000*get_interval_by_sec(&sw));
+  APP_DPRINTF("Time consumed(ms): %lf\n", 1000*get_interval_by_sec(&sw));
 
   cudaFree(d_m);
 
 
   if (do_verify){
     if (!brief_msg) {
-      printf("After LUD\n");
+      APP_DPRINTF("After LUD\n");
       print_matrix(m, matrix_dim);
     }
-    printf(">>>Verify<<<<\n");
+    APP_DPRINTF(">>>Verify<<<<\n");
     lud_verify(mm, m, matrix_dim, brief_msg); 
     free(mm);
   }
