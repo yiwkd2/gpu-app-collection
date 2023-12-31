@@ -254,6 +254,8 @@ void BFSGraph( int argc, char** argv)
 		fclose(result);
 	}
 
+    fflush(stdout);
+
 	// cleanup memory
 	free( h_graph_nodes);
 	free( h_graph_edges);
