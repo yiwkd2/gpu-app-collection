@@ -632,17 +632,17 @@ int main(int argc, char *argv []){
 	cudaMemcpy(common_ptr->tEpiColLoc, common_ptr->d_tEpiColLoc, common_ptr->epi_mem * common_ptr->no_frames, cudaMemcpyDeviceToHost);
 	FILE *ofile = fopen("result.txt", "w");
    for (int x = 0; x < common_ptr->endo_mem * common_ptr->no_frames / sizeof(int); x++) {
-      printf("common_ptr->tEndoRowLoc[%d] = %d\n", x, common_ptr->tEndoRowLoc[x]); 
-      printf("common_ptr->tEndoColLoc[%d] = %d\n", x, common_ptr->tEndoColLoc[x]); 
-      fprintf(ofile, "common_ptr->tEndoRowLoc[%d] = %d\n", x, common_ptr->tEndoRowLoc[x]); 
-      fprintf(ofile, "common_ptr->tEndoColLoc[%d] = %d\n", x, common_ptr->tEndoColLoc[x]); 
+      printf("common.tEndoRowLoc[%d] = %d\n", x, common_ptr->tEndoRowLoc[x]); 
+      printf("common.tEndoColLoc[%d] = %d\n", x, common_ptr->tEndoColLoc[x]); 
+      fprintf(ofile, "common.tEndoRowLoc[%d] = %d\n", x, common_ptr->tEndoRowLoc[x]); 
+      fprintf(ofile, "common.tEndoColLoc[%d] = %d\n", x, common_ptr->tEndoColLoc[x]); 
    }
 
    for (int x = 0; x < common_ptr->epi_mem * common_ptr->no_frames / sizeof(int); x++) {
-      printf("common_ptr->tEpiRowLoc[%d] = %d\n", x, common_ptr->tEpiRowLoc[x]); 
-      printf("common_ptr->tEpiColLoc[%d] = %d\n", x, common_ptr->tEpiColLoc[x]); 
-      fprintf(ofile, "common_ptr->tEpiRowLoc[%d] = %d\n", x, common_ptr->tEpiRowLoc[x]); 
-      fprintf(ofile, "common_ptr->tEpiColLoc[%d] = %d\n", x, common_ptr->tEpiColLoc[x]); 
+      printf("common.tEpiRowLoc[%d] = %d\n", x, common_ptr->tEpiRowLoc[x]); 
+      printf("common.tEpiColLoc[%d] = %d\n", x, common_ptr->tEpiColLoc[x]); 
+      fprintf(ofile, "common.tEpiRowLoc[%d] = %d\n", x, common_ptr->tEpiRowLoc[x]); 
+      fprintf(ofile, "common.tEpiColLoc[%d] = %d\n", x, common_ptr->tEpiColLoc[x]); 
    }
 	fclose(ofile);
 	if(goldfile){
