@@ -257,16 +257,26 @@ void BFSGraph( int argc, char** argv)
     fflush(stdout);
 
 	// cleanup memory
+    /*
 	free( h_graph_nodes);
 	free( h_graph_edges);
 	free( h_graph_mask);
 	free( h_updating_graph_mask);
 	free( h_graph_visited);
 	free( h_cost);
+    */
+    cudaFreeHost(h_graph_nodes);
+    cudaFreeHost(h_graph_edges);
+    cudaFreeHost(h_graph_mask);
+    cudaFreeHost(h_updating_graph_mask);
+    cudaFreeHost(h_graph_visited);
+    cudaFreeHost(h_cost);
+    cudaFreeHost(stop);
 	cudaFree(d_graph_nodes);
 	cudaFree(d_graph_edges);
 	cudaFree(d_graph_mask);
 	cudaFree(d_updating_graph_mask);
 	cudaFree(d_graph_visited);
 	cudaFree(d_cost);
+    cudaFree(d_over);
 }
