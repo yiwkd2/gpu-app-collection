@@ -301,6 +301,8 @@ int setup(int argc, char **argv) {
 	//free(features);
     cudaFreeHost(features[0]);
     cudaFreeHost(features);
+    cudaFreeHost(cluster_centres[0]);
+    cudaFreeHost(cluster_centres);
 
 	FILE* res = fopen("result.txt", "r");
 	FILE* gold = fopen(goldfile, "r");

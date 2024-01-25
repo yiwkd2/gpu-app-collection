@@ -110,9 +110,6 @@ int cluster(int      npoints,				/* number of data points */
 				}
 			}			
 		}
-
-        cudaFreeHost(tmp_cluster_centres[0]);
-        cudaFreeHost(tmp_cluster_centres);
 		
 		deallocateMemory();							/* free device memory (@ kmeans_cuda.cu) */
 	}
