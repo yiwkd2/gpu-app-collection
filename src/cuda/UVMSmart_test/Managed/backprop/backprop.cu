@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <cuda_runtime.h>
 //#define OPEN
 
 #define ABS(x)          (((x) > 0.0) ? (x) : (-(x)))
@@ -48,7 +49,8 @@ int layer_size = 0;
 unsigned int num_threads = 0;
 unsigned int num_blocks = 0;
 
-
+size_t total_malloc = 0;
+size_t free_memory, total_memory;
 
 
 
@@ -59,6 +61,7 @@ float *alloc_1d_dbl(int n)
   float *new_arr;
 
   cudaMallocManaged(&new_arr, n * sizeof (float));
+  total_malloc += n * sizeof(float);
   if (new_arr == NULL) {
     printf("ALLOC_1D_DBL: Couldn't allocate array of %d floats\n", n);
     return (NULL);
@@ -154,9 +157,9 @@ void bpnn_free(BPNN *net)
 
   cudaFree(net->input_weights);
   cudaFree(net->input_weights2);
-  cudaFree(net->input_prev_weights);
-
   cudaFree(net->hidden_weights);
+
+  cudaFree(net->input_prev_weights);
   cudaFree(net->hidden_prev_weights);
 
   free((char *) net);
@@ -505,6 +508,8 @@ int setup(int argc, char *argv[])
 int
 main( int argc, char** argv) 
 {
+    cudaMemGetInfo(&free_memory, &total_memory);
+    printf("(main) free: %llu, total: %llu\n", free_memory, total_memory);
 	setup(argc, argv);
 }
 
@@ -525,6 +530,30 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   num_blocks = in / 16;  
   dim3  grid( 1 , num_blocks);
   dim3  threads(16 , 16);
+
+  // reserve memory for oversubscription
+  total_malloc += (hid + 1) * sizeof(float);
+  total_malloc += num_blocks * WIDTH * sizeof(float);
+
+  cudaMemGetInfo(&free_memory, &total_memory);
+  fflush(stdout);
+  void* dummy;
+  size_t extra_malloc_size = free_memory - (size_t) (total_malloc * 0.5) + 128;
+  printf("(before malloc) free: %llu, total: %llu, total_malloc: %llu, extra_malloc_size: %llu\n",
+          free_memory, total_memory, total_malloc, extra_malloc_size);
+  cudaError_t status = cudaMalloc(&dummy, extra_malloc_size);
+  if (status != cudaSuccess) {
+    printf("cudaMalloc failed: %s\n", cudaGetErrorString(status));
+    fflush(stdout);
+  }
+  cudaMemGetInfo(&free_memory, &total_memory);
+  printf("(after malloc) free: %llu, total: %llu\n", free_memory, total_memory);
+
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
+  cudaEventRecord(start);
   
   cudaMallocManaged((void**) &output_hidden_cuda, (hid + 1) * sizeof(float));
   cudaMallocManaged((void**) &hidden_partial_sum, num_blocks * WIDTH * sizeof(float));
@@ -651,6 +680,25 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 
   cudaDeviceSynchronize();
 
+  cudaMemGetInfo(&free_memory, &total_memory);
+  printf("free: %llu, total: %llu\n", free_memory, total_memory);
+
+  cudaMemGetInfo(&free_memory, &total_memory);
+
+  cudaFree(output_hidden_cuda);
+  cudaFree(hidden_partial_sum);
+
+  cudaEventRecord(stop);
+  cudaEventSynchronize(stop);
+
+  float milliseconds = 0;
+  cudaEventElapsedTime(&milliseconds, start, stop);
+
+  printf("Elapsed Time: %fms\n", milliseconds);
+
+  cudaEventDestroy(start);
+  cudaEventDestroy(stop);
+
 #define DEBUG
 #ifdef DEBUG
   FILE *fp2 = fopen("result.txt","w");
@@ -668,8 +716,6 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   
 #endif
 
-  cudaFree(output_hidden_cuda);
-  cudaFree(hidden_partial_sum);
 #endif   
   
   

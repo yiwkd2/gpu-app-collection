@@ -94,7 +94,12 @@ void runTest( int argc, char** argv)
 	fprintf(stderr,"The dimension values must be a multiple of 16\n");
 	exit(1);
 	}
-	
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
 
 	max_rows = max_rows + 1;
 	max_cols = max_cols + 1;
@@ -136,7 +141,6 @@ void runTest( int argc, char** argv)
 	for( int j = 1; j< max_cols ; j++)
        input_itemsets[j] = -j * penalty;
 
-
     size = max_cols * max_rows;
 	cudaMalloc((void**)& referrence_cuda, sizeof(int)*size);
 	cudaMalloc((void**)& matrix_cuda, sizeof(int)*size);
@@ -164,7 +168,6 @@ void runTest( int argc, char** argv)
 		needle_cuda_shared_2<<<dimGrid, dimBlock>>>(referrence_cuda, matrix_cuda
 		                                      ,max_cols, penalty, i, block_width); 
 	}
-
 
     cudaMemcpy(output_itemsets, matrix_cuda, sizeof(int) * size, cudaMemcpyDeviceToHost);
 	
@@ -236,5 +239,15 @@ void runTest( int argc, char** argv)
 	free(input_itemsets);
 	free(output_itemsets);
 	
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 }
 

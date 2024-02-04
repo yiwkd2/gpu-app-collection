@@ -22,8 +22,8 @@
 #define GPU_DEVICE 0
 
 /* Problem size */
-#define NI 1024
-#define NJ 1024
+#define NI 6144
+#define NJ 6144
 
 /* Thread block dimensions */
 #define DIM_THREAD_BLOCK_X 32
@@ -83,6 +83,12 @@ int main(int argc, char *argv[])
 	DATA_TYPE* A;
 	DATA_TYPE* B;  
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
 	cudaMallocManaged( &A, NI*NJ*sizeof(DATA_TYPE) );
 	cudaMallocManaged( &B, NI*NJ*sizeof(DATA_TYPE) );
 
@@ -90,6 +96,17 @@ int main(int argc, char *argv[])
 	init(A);
 
 	convolution2DCuda(A, B);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 	
 	FILE *fp;
 

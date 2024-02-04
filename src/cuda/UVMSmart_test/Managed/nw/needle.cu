@@ -10,6 +10,9 @@
 // includes, kernels
 #include "needle_kernel.cu"
 
+size_t total_malloc = 0;
+size_t free_memory, total_memory;
+
 ////////////////////////////////////////////////////////////////////////////////
 // declaration, forward
 void runTest( int argc, char** argv);
@@ -64,7 +67,7 @@ main( int argc, char** argv)
 
 void usage(int argc, char **argv)
 {
-	fprintf(stderr, "Usage: %s <max_rows/max_cols> <penalty> \n", argv[0]);
+	fprintf(stderr, "Usage: %s <max_rows/max_cols> <penalty> <dev_mem_ratio (%%)>\n", argv[0]);
 	fprintf(stderr, "\t<dimension>  - x and y dimensions\n");
 	fprintf(stderr, "\t<penalty> - penalty(positive integer)\n");
 	exit(1);
@@ -72,18 +75,19 @@ void usage(int argc, char **argv)
 
 void runTest( int argc, char** argv) 
 {
-        int max_rows, max_cols, penalty;
+    int max_rows, max_cols, penalty;
+    float dev_mem_ratio;
 	int *itemsets,  *referrence;
 	int size;
-	
-    
+	 
     	// the lengths of the two sequences should be able to divided by 16.
 	// And at current stage  max_rows needs to equal max_cols
-	if (argc == 3)
+	if (argc == 4)
 	{
 		max_rows = atoi(argv[1]);
 		max_cols = atoi(argv[1]);
 		penalty = atoi(argv[2]);
+        dev_mem_ratio = (float) atoi(argv[3]) / 100;
 	}
     	else{
 		usage(argc, argv);
@@ -93,12 +97,39 @@ void runTest( int argc, char** argv)
 		fprintf(stderr,"The dimension values must be a multiple of 16\n");
 		exit(1);
 	}
-	
 
 	max_rows = max_rows + 1;
 	max_cols = max_cols + 1;
     
 	size = max_cols * max_rows;
+
+    if (dev_mem_ratio != 1.0) {
+        total_malloc += size * sizeof(int);
+        total_malloc += size * sizeof(int);
+        cudaMemGetInfo(&free_memory, &total_memory);
+        void* dummy;
+        size_t extra_malloc_size = free_memory - (size_t) (total_malloc * dev_mem_ratio);
+        printf("(before malloc) free: %lx, total: %lx, total_malloc: %lx, extra_malloc_size: %lx, dev_mem_ratio: %f\n",
+                free_memory, total_memory, total_malloc, extra_malloc_size, dev_mem_ratio);
+        fflush(stdout);
+        cudaError_t status = cudaMalloc(&dummy, extra_malloc_size);
+        if (status != cudaSuccess) {
+          printf("cudaMalloc failed: %s\n", cudaGetErrorString(status));
+          fflush(stdout);
+          exit(1);
+        }
+        cudaMemGetInfo(&free_memory, &total_memory);
+        printf("(after malloc) free: %lx, total: %lx\n", free_memory, total_memory);
+        fflush(stdout);
+    } else {
+        printf("Undersubscription case\n");
+    }
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
 
 	cudaMallocManaged(&referrence, sizeof(int)*size);
 	cudaMallocManaged(&itemsets, sizeof(int)*size);
@@ -159,6 +190,7 @@ void runTest( int argc, char** argv)
 	int block_width = ( max_cols - 1 )/BLOCK_SIZE;
 
 	printf("Processing top-left matrix\n");
+    fflush(stdout);
 	
 	//process top-left matrix
 	for( int i = 1 ; i <= block_width ; i++){
@@ -172,6 +204,7 @@ void runTest( int argc, char** argv)
 	}
 	
 	printf("Processing bottom-right matrix\n");
+    fflush(stdout);
 
     	//process bottom-right matrix
 	for( int i = block_width - 1  ; i >= 1 ; i--){
@@ -187,6 +220,14 @@ void runTest( int argc, char** argv)
 
 	// Wait for GPU to finish before accessing on host
 	cudaDeviceSynchronize();
+
+    /*
+    printf("kernel execution is completed. dump memory, (referrence) addr: %p, size: %lx, "
+            "(itemsets) addr: %p, size: %lx\n",
+            referrence, sizeof(int)*size, itemsets, sizeof(int)*size);
+    fflush(stdout);
+    while(1) {}
+    */
 	
 #define TRACEBACK
 #ifdef TRACEBACK
@@ -252,5 +293,15 @@ void runTest( int argc, char** argv)
 	cudaFree(referrence);
 	cudaFree(itemsets);
 
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 }
 
