@@ -34,20 +34,20 @@ data:
 UVMSmart_test:
 	mkdir -p $(BINDIR)/$(BINSUBDIR)/
 	cd cuda/UVMSmart_test/; make
-	mv cuda/UVMSmart_test/Managed/2DCONV/2dconv $(BINDIR)/$(BINSUBDIR)/uvm_2dconv
-	mv cuda/UVMSmart_test/Managed/ATAX/atax $(BINDIR)/$(BINSUBDIR)/uvm_atax
-	mv cuda/UVMSmart_test/Managed/AddVectors/add_vectors $(BINDIR)/$(BINSUBDIR)/uvm_add_vectors
-	mv cuda/UVMSmart_test/Managed/FDTD-2D/main $(BINDIR)/$(BINSUBDIR)/uvm_fdtd
-	mv cuda/UVMSmart_test/Managed/StreamTriad/stream_triad $(BINDIR)/$(BINSUBDIR)/uvm_stream_triad
-	mv cuda/UVMSmart_test/Managed/backprop/backprop $(BINDIR)/$(BINSUBDIR)/uvm_backprop
-	mv cuda/UVMSmart_test/Managed/bfs/bfs $(BINDIR)/$(BINSUBDIR)/uvm_bfs
-	mv cuda/UVMSmart_test/Managed/hotspot/hotspot $(BINDIR)/$(BINSUBDIR)/uvm_hotspot
-	mv cuda/UVMSmart_test/Managed/nw/needle $(BINDIR)/$(BINSUBDIR)/uvm_needle
-	mv cuda/UVMSmart_test/Managed/pathfinder/pathfinder $(BINDIR)/$(BINSUBDIR)/uvm_pathfinder
-	mv cuda/UVMSmart_test/Managed/ra/main $(BINDIR)/$(BINSUBDIR)/uvm_ra
-	mv cuda/UVMSmart_test/Managed/srad_v2/srad $(BINDIR)/$(BINSUBDIR)/uvm_srad
-	mv cuda/UVMSmart_test/Managed/sssp/sssp $(BINDIR)/$(BINSUBDIR)/uvm_sssp
-	mv cuda/UVMSmart_test/Managed/stencil/main $(BINDIR)/$(BINSUBDIR)/uvm_stencil
+	cp cuda/UVMSmart_test/Managed/2DCONV/2dconv $(BINDIR)/$(BINSUBDIR)/uvm_2dconv
+	cp cuda/UVMSmart_test/Managed/ATAX/atax $(BINDIR)/$(BINSUBDIR)/uvm_atax
+	cp cuda/UVMSmart_test/Managed/AddVectors/add_vectors $(BINDIR)/$(BINSUBDIR)/uvm_add_vectors
+	cp cuda/UVMSmart_test/Managed/FDTD-2D/main $(BINDIR)/$(BINSUBDIR)/uvm_fdtd
+	cp cuda/UVMSmart_test/Managed/StreamTriad/stream_triad $(BINDIR)/$(BINSUBDIR)/uvm_stream_triad
+	cp cuda/UVMSmart_test/Managed/backprop/backprop $(BINDIR)/$(BINSUBDIR)/uvm_backprop
+	cp cuda/UVMSmart_test/Managed/bfs/bfs $(BINDIR)/$(BINSUBDIR)/uvm_bfs
+	cp cuda/UVMSmart_test/Managed/hotspot/hotspot $(BINDIR)/$(BINSUBDIR)/uvm_hotspot
+	cp cuda/UVMSmart_test/Managed/nw/needle $(BINDIR)/$(BINSUBDIR)/uvm_needle
+	cp cuda/UVMSmart_test/Managed/pathfinder/pathfinder $(BINDIR)/$(BINSUBDIR)/uvm_pathfinder
+	cp cuda/UVMSmart_test/Managed/ra/main $(BINDIR)/$(BINSUBDIR)/uvm_ra
+	cp cuda/UVMSmart_test/Managed/srad_v2/srad $(BINDIR)/$(BINSUBDIR)/uvm_srad
+	cp cuda/UVMSmart_test/Managed/sssp/sssp $(BINDIR)/$(BINSUBDIR)/uvm_sssp
+	cp cuda/UVMSmart_test/Managed/stencil/main $(BINDIR)/$(BINSUBDIR)/uvm_stencil
 
 ###################################################################################################3
 # Rodinia 2.0 Functional Test Stuff
