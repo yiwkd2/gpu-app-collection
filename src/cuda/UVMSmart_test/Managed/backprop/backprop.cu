@@ -42,6 +42,15 @@
 #define MOMENTUM 0.3  //momentum value
 #define NUM_THREAD 4  //OpenMP threads
 
+#define USIM
+#ifdef USIM
+#define HOST_ACCESS(access_type, vaddr) cudaIpcGetMemHandle(access_type, vaddr)
+#else
+#define HOST_ACCESS() do {} while(0)
+#endif
+#define READ NULL
+#define WRITE ((cudaIpcMemHandle_t*) 1)
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -203,6 +212,7 @@ void bpnn_layerforward(float* l1,float* l2,float* conn,int n1,int n2)
   int j, k;
 
   /*** Set up thresholding unit ***/
+  HOST_ACCESS(WRITE, &l1[0]);
   l1[0] = 1.0;
 #ifdef OPEN
   omp_set_num_threads(NUM_THREAD);
@@ -214,8 +224,11 @@ void bpnn_layerforward(float* l1,float* l2,float* conn,int n1,int n2)
     /*** Compute weighted sum of its inputs ***/
     sum = 0.0;
     for (k = 0; k <= n1; k++) {
+      HOST_ACCESS(READ, &conn[k*(n2+1)+j]);
+      HOST_ACCESS(READ, &l1[k]);
       sum += conn[k*(n2+1)+j] * l1[k];
     }
+    HOST_ACCESS(WRITE, &l2[j]);
     l2[j] = squash(sum);
   }
 }
@@ -226,9 +239,13 @@ void bpnn_output_error(float* delta,float* target,float* output,int nj,float* er
   float o, t, errsum;
   errsum = 0.0;
   for (j = 1; j <= nj; j++) {
+    HOST_ACCESS(READ, &output[j]);
     o = output[j];
+    HOST_ACCESS(READ, &target[j]);
     t = target[j];
+    HOST_ACCESS(WRITE, &delta[j]);
     delta[j] = o * (1.0 - o) * (t - o);
+    HOST_ACCESS(WRITE, &delta[j]);
     errsum += ABS(delta[j]);
   }
   *err = errsum;
@@ -248,12 +265,17 @@ void bpnn_hidden_error(float* delta_h,
 
   errsum = 0.0;
   for (j = 1; j <= nh; j++) {
+    HOST_ACCESS(READ, &hidden[j]);
     h = hidden[j];
     sum = 0.0;
     for (k = 1; k <= no; k++) {
+      HOST_ACCESS(READ, &delta_o[k]);
+      HOST_ACCESS(READ, &who[j*(no+1)+k]);
       sum += delta_o[k] * who[j*(no+1)+k];
     }
+    HOST_ACCESS(WRITE, &delta_h[j]);
     delta_h[j] = h * (1.0 - h) * sum;
+    HOST_ACCESS(READ, &delta_h[j]);
     errsum += ABS(delta_h[j]);
   }
   *err = errsum;
@@ -264,6 +286,7 @@ void bpnn_adjust_weights(float *delta,int ndelta,float* ly,int nly,float* w,floa
 {
   float new_dw;
   int k, j;
+  HOST_ACCESS(READ, &ly[0]);
   ly[0] = 1.0;
   //eta = 0.3;
   //momentum = 0.3;
@@ -276,8 +299,13 @@ void bpnn_adjust_weights(float *delta,int ndelta,float* ly,int nly,float* w,floa
 #endif
   for (j = 1; j <= ndelta; j++) {
     for (k = 0; k <= nly; k++) {
+      HOST_ACCESS(READ, &delta[j]);
+      HOST_ACCESS(READ, &ly[k]);
+      HOST_ACCESS(READ, &oldw[k*(ndelta+1)+j]);
       new_dw = ((ETA * delta[j] * ly[k]) + (MOMENTUM * oldw[k*(ndelta+1)+j]));
+      HOST_ACCESS(READ, &w[k*(ndelta+1)+j]);
           w[k*(ndelta+1)+j] += new_dw;
+      HOST_ACCESS(READ, &oldw[k*(ndelta+1)+j]);
           oldw[k*(ndelta+1)+j] = new_dw;
     }
   }
@@ -532,6 +560,7 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   dim3  threads(16 , 16);
 
   // reserve memory for oversubscription
+  /*
   total_malloc += (hid + 1) * sizeof(float);
   total_malloc += num_blocks * WIDTH * sizeof(float);
 
@@ -548,6 +577,7 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   }
   cudaMemGetInfo(&free_memory, &total_memory);
   printf("(after malloc) free: %llu, total: %llu\n", free_memory, total_memory);
+  */
 
   cudaEvent_t start, stop;
   cudaEventCreate(&start);
@@ -631,10 +661,13 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   for (int j = 1; j <= hid; j++) {
     sum = 0.0;
     for (int k = 0; k < num_blocks; k++) {	
+      HOST_ACCESS(READ, &hidden_partial_sum[k * hid + j-1]);
       sum += hidden_partial_sum[k * hid + j-1] ;
     }
+    HOST_ACCESS(READ, &net->input_weights[j]);
     sum += net->input_weights[j];
-    net-> hidden_units[j] = float(1.0 / (1.0 + exp(-sum)));
+    HOST_ACCESS(READ, &net->hidden_units[j]);
+    net->hidden_units[j] = float(1.0 / (1.0 + exp(-sum)));
   }
   #endif
 
@@ -680,13 +713,36 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 
   cudaDeviceSynchronize();
 
+  /*
   cudaMemGetInfo(&free_memory, &total_memory);
   printf("free: %llu, total: %llu\n", free_memory, total_memory);
 
   cudaMemGetInfo(&free_memory, &total_memory);
+  */
 
   cudaFree(output_hidden_cuda);
   cudaFree(hidden_partial_sum);
+
+#define DEBUG
+#ifdef DEBUG
+  FILE *fp2 = fopen("result.txt","w");
+  fprintf(fp2,"Input_units:\n");
+  for(int i = 0; i < in + 1; i ++) {
+    HOST_ACCESS(READ, &net->input_units[i]);
+    fprintf(fp2,"%f ", net->input_units[i]);
+  }
+  fprintf(fp2,"\n");
+  fprintf(fp2,"Input_weight_one_dim:\n");
+  for(int i = 0; i < in + 1; i ++){
+    for(int j = 0; j < hid + 1; j++) {
+      HOST_ACCESS(READ, &net->input_weights2[i*(hid+1)+j]);
+      fprintf(fp2,"%f ", net->input_weights2[i*(hid+1)+j]);
+    }
+    fprintf(fp2,"\n");
+  }
+  fclose(fp2);
+  
+#endif
 
   cudaEventRecord(stop);
   cudaEventSynchronize(stop);
@@ -698,23 +754,6 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 
   cudaEventDestroy(start);
   cudaEventDestroy(stop);
-
-#define DEBUG
-#ifdef DEBUG
-  FILE *fp2 = fopen("result.txt","w");
-  fprintf(fp2,"Input_units:\n");
-  for(int i = 0; i < in + 1; i ++)
-    fprintf(fp2,"%f ", net->input_units[i]);
-  fprintf(fp2,"\n");
-  fprintf(fp2,"Input_weight_one_dim:\n");
-  for(int i = 0; i < in + 1; i ++){
-    for(int j = 0; j < hid + 1; j++)
-      fprintf(fp2,"%f ", net->input_weights2[i*(hid+1)+j]);
-    fprintf(fp2,"\n");
-  }
-  fclose(fp2);
-  
-#endif
 
 #endif   
   

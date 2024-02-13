@@ -238,20 +238,26 @@ void runTest( int argc, char** argv)
 	for (int i = max_rows - 2,  j = max_rows - 2; i>=0, j>=0;){
 		int nw, n, w, traceback;
 		if ( i == max_rows - 2 && j == max_rows - 2 )
+            cudaIpcGetMemHandle(NULL, &itemsets[ i * max_cols + j]);
 			fprintf(fpo, "%d ", itemsets[ i * max_cols + j]); //print the first element
 		if ( i == 0 && j == 0 )
            		break;
 		if ( i > 0 && j > 0 ){
+            cudaIpcGetMemHandle(NULL, &itemsets[ (i - 1) * max_cols + j - 1 ]);
 			nw = itemsets[(i - 1) * max_cols + j - 1];
+            cudaIpcGetMemHandle(NULL, &itemsets[ i * max_cols + j - 1 ]);
 		    	w  = itemsets[ i * max_cols + j - 1 ];
+            cudaIpcGetMemHandle(NULL, &itemsets[ (i - 1) * max_cols + j ]);
             		n  = itemsets[(i - 1) * max_cols + j];
 		}
 		else if ( i == 0 ){
 		    	nw = n = LIMIT;
+                cudaIpcGetMemHandle(NULL, &itemsets[ i * max_cols + j - 1 ]);
 		    	w  = itemsets[ i * max_cols + j - 1 ];
 		}
 		else if ( j == 0 ){
 		    	nw = w = LIMIT;
+                cudaIpcGetMemHandle(NULL, &itemsets[ (i - 1) * max_cols + j ]);
             	   	n  = itemsets[(i - 1) * max_cols + j];
 		}
 		else{
@@ -259,6 +265,7 @@ void runTest( int argc, char** argv)
 
 		//traceback = maximum(nw, w, n);
 		int new_nw, new_w, new_n;
+        cudaIpcGetMemHandle(NULL, &referrence[ i * max_cols + j ]);
 		new_nw = nw + referrence[i * max_cols + j];
 		new_w = w - penalty;
 		new_n = n - penalty;
