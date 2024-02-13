@@ -42,11 +42,11 @@
 #define MOMENTUM 0.3  //momentum value
 #define NUM_THREAD 4  //OpenMP threads
 
-#define USIM
+//#define USIM
 #ifdef USIM
 #define HOST_ACCESS(access_type, vaddr) cudaIpcGetMemHandle(access_type, vaddr)
 #else
-#define HOST_ACCESS() do {} while(0)
+#define HOST_ACCESS(...) do {} while(0)
 #endif
 #define READ NULL
 #define WRITE ((cudaIpcMemHandle_t*) 1)
