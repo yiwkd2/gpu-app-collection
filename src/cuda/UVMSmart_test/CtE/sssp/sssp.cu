@@ -327,6 +327,12 @@ int main(int argc, char* argv[]) {
     // --- Source vertex
     int sourceVertex = 0;
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
     // --- Allocate memory for arrays
     GraphData graph;
     generateRandomGraph(&graph, numVertices, neighborsPerVertex);
@@ -384,6 +390,17 @@ int main(int argc, char* argv[]) {
 
     //free(h_shortestDistancesCPU);
     cudaFreeHost(h_shortestDistancesGPU);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+	
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
     return 0;
 }

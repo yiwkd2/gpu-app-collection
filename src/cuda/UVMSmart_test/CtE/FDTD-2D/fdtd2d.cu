@@ -232,6 +232,12 @@ int main(int argc, char *argv[])
 	DATA_TYPE* hz;
 	DATA_TYPE* hz_outputFromGpu;
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
     cudaMallocHost(&_fict_, tmax*sizeof(DATA_TYPE));
     cudaMallocHost(&ex, NX*(NY+1)*sizeof(DATA_TYPE));
     cudaMallocHost(&ey, (NX+1)*NY*sizeof(DATA_TYPE));
@@ -269,6 +275,17 @@ int main(int argc, char *argv[])
 	cudaFreeHost(ey);
 	cudaFreeHost(hz);
 	cudaFreeHost(hz_outputFromGpu);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+	
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
 	return 0;
 }

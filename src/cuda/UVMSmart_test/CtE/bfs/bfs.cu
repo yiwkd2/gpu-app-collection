@@ -138,6 +138,12 @@ void BFSGraph( int argc, char** argv)
 
 	printf("Read File\n");
 
+    cudaEvent_t start_, stop_;
+    cudaEventCreate(&start_);
+    cudaEventCreate(&stop_);
+
+    cudaEventRecord(start_);
+
 	//Copy the Node list to device memory
 	Node* d_graph_nodes;
 	cudaMalloc( (void**) &d_graph_nodes, sizeof(Node)*no_of_nodes) ;
@@ -235,4 +241,16 @@ void BFSGraph( int argc, char** argv)
 	cudaFree(d_updating_graph_mask);
 	cudaFree(d_graph_visited);
 	cudaFree(d_cost);
+
+    cudaEventRecord(stop_);
+    cudaEventSynchronize(stop_);
+	
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start_, stop_);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start_);
+    cudaEventDestroy(stop_);
+
 }

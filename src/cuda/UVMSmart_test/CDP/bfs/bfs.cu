@@ -21,7 +21,7 @@
 #include <math.h>
 #include <cuda.h>
 
-#define USIM
+//#define USIM
 #include "../common.h"
 
 #define MAX_THREADS_PER_BLOCK 512
@@ -83,6 +83,12 @@ void BFSGraph( int argc, char** argv)
 	int source = 0;
 
 	fscanf(fp,"%d",&no_of_nodes);
+
+    cudaEvent_t start_, stop_;
+    cudaEventCreate(&start_);
+    cudaEventCreate(&stop_);
+
+    cudaEventRecord(start_);
 
 	int num_of_blocks = 1;
 	int num_of_threads_per_block = no_of_nodes;
@@ -269,6 +275,17 @@ void BFSGraph( int argc, char** argv)
 	cudaFree(graph_visited);
 	cudaFree(cost);
 	cudaFree(d_over);
+
+    cudaEventRecord(stop_);
+    cudaEventSynchronize(stop_);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start_, stop_);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start_);
+    cudaEventDestroy(stop_);
 
     MEM_TEST();
 }

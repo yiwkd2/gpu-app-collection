@@ -25,7 +25,7 @@
 #define DIM_THREAD_BLOCK_X 32
 #define DIM_THREAD_BLOCK_Y 8
 
-#define USIM
+//#define USIM
 #include "../common.h"
 
 uint64_t NI;
@@ -110,17 +110,6 @@ int main(int argc, char *argv[])
 	init(A);
 
 	convolution2DCuda(A, B);
-
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-    printf("Elapsed Time: %fms\n", milliseconds);
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
 	
 	FILE *fp;
 
@@ -135,6 +124,17 @@ int main(int argc, char *argv[])
 
 	cudaFree(A);
 	cudaFree(B);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
     MEM_TEST();
 	

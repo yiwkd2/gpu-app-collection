@@ -295,6 +295,12 @@ void run(int argc, char** argv)
 	
     size=grid_rows*grid_cols;
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
     /* --------------- pyramid parameters --------------- */
     # define EXPAND_RATE 2// add one iteration will extend the pyramid base by 2 per each borderline
     int borderCols = (pyramid_height)*EXPAND_RATE/2;
@@ -338,4 +344,15 @@ void run(int argc, char** argv)
     cudaFreeHost(MatrixOut);
     cudaFreeHost(FilesavingTemp);
     cudaFreeHost(FilesavingPower);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+	
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 }

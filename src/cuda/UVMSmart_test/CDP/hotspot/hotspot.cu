@@ -3,7 +3,7 @@
 #include <time.h>
 #include <assert.h>
 
-#define USIM
+//#define USIM
 #include "../common.h"
 
 #ifdef RD_WG_SIZE_0_0                                                            
@@ -313,6 +313,12 @@ void run(int argc, char** argv)
 	
     size=grid_rows*grid_cols;
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
     /* --------------- pyramid parameters --------------- */
     # define EXPAND_RATE 2// add one iteration will extend the pyramid base by 2 per each borderline
     int borderCols = (pyramid_height)*EXPAND_RATE/2;
@@ -369,6 +375,17 @@ void run(int argc, char** argv)
     cudaFree(MatrixPower);
     cudaFree(MatrixTemp[0]);
     cudaFree(MatrixTemp[1]);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
     MEM_TEST();
 }

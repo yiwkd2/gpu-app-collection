@@ -31,7 +31,7 @@ uint64_t NY;
 #define DIM_THREAD_BLOCK_X 32
 #define DIM_THREAD_BLOCK_Y 8
 
-#define USIM
+//#define USIM
 #include "../common.h"
 
 /* Can switch DATA_TYPE between float and double */
@@ -238,6 +238,12 @@ int main(int argc, char *argv[])
 	DATA_TYPE* hz;
 	//DATA_TYPE* hz_outputFromGpu;
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
 /*
 	_fict_ = (DATA_TYPE*)malloc(tmax*sizeof(DATA_TYPE));
 	ex = (DATA_TYPE*)malloc(NX*(NY+1)*sizeof(DATA_TYPE));
@@ -290,6 +296,17 @@ int main(int argc, char *argv[])
 	//free(hz_outputFromGpu);
 
     MEM_TEST();
+    
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
     
 	return 0;
 }

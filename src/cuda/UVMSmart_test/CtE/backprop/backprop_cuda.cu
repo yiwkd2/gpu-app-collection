@@ -60,6 +60,12 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   dim3  grid( 1 , num_blocks);
   dim3  threads(16 , 16);
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
   // [USIM] USIM requires to allocate host memory using cudaMallocHost
   // So replace net->input_units and net->hidden_delta
   float *tmp_input, *tmp_hidden_delta;
@@ -201,6 +207,17 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   cudaFreeHost(partial_sum);
   cudaFreeHost(input_weights_one_dim);
   cudaFreeHost(input_weights_prev_one_dim);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+	
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
   // [USIM] replace net->input_units and net->hidden_delta again...
   tmp_input = alloc_1d_dbl(in + 1);

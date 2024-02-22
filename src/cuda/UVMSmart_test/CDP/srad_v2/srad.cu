@@ -11,7 +11,7 @@
 // includes, kernels
 #include "srad_kernel.cu"
 
-#define USIM
+//#define USIM
 #include "../common.h"
 
 void random_matrix(float *I, int rows, int cols);
@@ -78,6 +78,11 @@ runTest( int argc, char** argv)
         usage(argc, argv);
     }
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
 
 
 	size_I = cols * rows;
@@ -185,6 +190,17 @@ runTest( int argc, char** argv)
 	cudaFree(J_shared);
   
     MEM_TEST();
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 }
 
 

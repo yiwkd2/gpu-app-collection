@@ -188,6 +188,12 @@ int main(int argc, char** argv)
 
 void run(int argc, char** argv)
 {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
     init(argc, argv);
 
     /* --------------- pyramid parameters --------------- */
@@ -231,5 +237,16 @@ void run(int argc, char** argv)
     cudaFreeHost(data);
     cudaFreeHost(wall);
     cudaFreeHost(result);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+	
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 }
 

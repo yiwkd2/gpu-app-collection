@@ -87,6 +87,11 @@ runTest( int argc, char** argv)
     }
 
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
 
 	size_I = cols * rows;
     size_R = (r2-r1+1)*(c2-c1+1);   
@@ -268,6 +273,17 @@ runTest( int argc, char** argv)
 	cudaFree(S_C);
 #endif 
 	free(c);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+	
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
   
 }
 

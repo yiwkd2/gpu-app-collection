@@ -10,7 +10,7 @@
 
 #define BENCH_PRINT
 
-#define USIM
+//#define USIM
 #include "../common.h"
 
 void run(int argc, char** argv);
@@ -220,6 +220,12 @@ int main(int argc, char** argv)
 
 void run(int argc, char** argv)
 {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
     init(argc, argv);
 
     /* --------------- pyramid parameters --------------- */
@@ -265,6 +271,17 @@ void run(int argc, char** argv)
     cudaFree(gpuWall);
     cudaFree(gpuResult[0]);
     cudaFree(gpuResult[1]);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
     delete [] data;
 
