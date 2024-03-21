@@ -10,8 +10,7 @@
 // includes, kernels
 #include "needle_kernel.cu"
 
-//#define USIM
-#include "../common.h"
+#include "../../common.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // declaration, forward
