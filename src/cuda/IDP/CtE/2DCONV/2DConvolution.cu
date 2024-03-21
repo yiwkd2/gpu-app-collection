@@ -87,12 +87,6 @@ int main(int argc, char *argv[])
     NI = atoi(argv[1]);
     NJ = NI;
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-
 	DATA_TYPE* A;
 	DATA_TYPE* B;
 
@@ -108,8 +102,11 @@ int main(int argc, char *argv[])
     cudaMalloc((void**) &A_cuda, NI * NJ * sizeof(DATA_TYPE));
     cudaMalloc((void**) &B_cuda, NI * NJ * sizeof(DATA_TYPE));
 
-	//cudaMallocManaged( &A, NI*NJ*sizeof(DATA_TYPE) );
-	//cudaMallocManaged( &B, NI*NJ*sizeof(DATA_TYPE) );
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
 
     cudaMemcpy(A_cuda, A, NI * NJ * sizeof(DATA_TYPE), cudaMemcpyHostToDevice);
 
