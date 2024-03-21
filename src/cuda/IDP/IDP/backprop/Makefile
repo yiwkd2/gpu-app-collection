@@ -5,10 +5,7 @@ NVCC = nvcc
 NVCC_FLAGS = -g -Wno-deprecated-gpu-targets
 
 default:
-	$(NVCC) $(NVCC_FLAGS) $(KERNEL_DIM) backprop.cu -lcudart -o backprop
-
-prefetch:
-	$(NVCC) $(NVCC_FLAGS) $(KERNEL_DIM) -DPREF backprop.cu -lcudart -o backprop
+	$(NVCC) $(NVCC_FLAGS) $(KERNEL_DIM) backprop.cu -lcudart -DUSIM -o backprop_IDP
 
 clean: $(SRC)
-	rm -f backprop *.txt gpgpusim_power_report* _cuobjdump_*
+	rm -f backprop_IDP *.txt gpgpusim_power_report* _cuobjdump_*

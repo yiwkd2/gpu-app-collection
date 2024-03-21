@@ -44,8 +44,7 @@
 #define MOMENTUM 0.3  //momentum value
 #define NUM_THREAD 4  //OpenMP threads
 
-#define USIM
-#include "../common.h"
+#include "../../common.h"
 
 int layer_size = 0;
 unsigned int num_threads = 0;
