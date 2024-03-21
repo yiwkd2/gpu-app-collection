@@ -4,8 +4,7 @@
 #include <stdio.h>
 #include <float.h>
 
-//#define USIM
-#include "../common.h"
+#include "../../common.h"
 //#include "Utilities.cuh"
 
 #define NUM_ASYNCHRONOUS_ITERATIONS 5  // Number of async loop iterations before attempting to read results back
