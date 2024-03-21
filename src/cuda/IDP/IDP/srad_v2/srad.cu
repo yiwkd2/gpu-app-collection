@@ -11,8 +11,7 @@
 // includes, kernels
 #include "srad_kernel.cu"
 
-#define USIM
-#include "../common.h"
+#include "../../common.h"
 
 void random_matrix(float *I, int rows, int cols);
 void runTest( int argc, char** argv);
