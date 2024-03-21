@@ -8,8 +8,8 @@ CC_FLAGS = -g  -O2
 NVCC = nvcc
 NVCC_FLAGS = -g -Wno-deprecated-gpu-targets
 
-backprop: backprop.o facetrain.o imagenet.o backprop_cuda.o 
-	$(NVCC) $(NVCC_FLAGS) backprop.o facetrain.o imagenet.o backprop_cuda.o -lcudart -lm -o backprop
+backprop_CtE: backprop.o facetrain.o imagenet.o backprop_cuda.o 
+	$(NVCC) $(NVCC_FLAGS) backprop.o facetrain.o imagenet.o backprop_cuda.o -lcudart -lm -o backprop_CtE
 
 %.o: %.[ch]
 	$(CC) $(CC_FLAGS) $< -c
@@ -28,4 +28,4 @@ imagenet.o: imagenet.c backprop.h
 
 
 clean:
-	rm -f *.o *~ backprop *.linkinfo *.txt gpgpusim_power_report* _cuobjdump_*
+	rm -f *.o *~ backprop_CtE *.linkinfo *.txt gpgpusim_power_report* _cuobjdump_*
