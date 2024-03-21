@@ -1,10 +1,7 @@
 #!/usr/bin/make
 
 default:
-	nvcc -g -Wno-deprecated-gpu-targets sssp.cu -lcudart -o sssp
-
-prefetch:
-	nvcc -g -DPREF -Wno-deprecated-gpu-targets sssp.cu -lcudart -o sssp
+	nvcc -g -Wno-deprecated-gpu-targets sssp.cu -lcudart -o sssp_CtE
 
 clean:
-	rm -rf sssp gpgpusim_power_report* _cuobjdump_* *.txt
+	rm -rf sssp_CtE gpgpusim_power_report* _cuobjdump_* *.txt
