@@ -6,10 +6,8 @@ NVCC_FLAGS = -g -Wno-deprecated-gpu-targets
 
 SRC = hotspot.cu
 
-EXE = hotspot
-
 default:
-	$(NVCC) $(NVCC_FLAGS) $(KERNEL_DIM) hotspot.cu -lcudart -o hotspot
+	$(NVCC) $(NVCC_FLAGS) $(KERNEL_DIM) hotspot.cu -lcudart -o hotspot_CtE
 
 clean:
-	rm -f hotspot *.txt gpgpusim_power_report* _cuobjdump_*
+	rm -f hotspot_CtE *.txt gpgpusim_power_report* _cuobjdump_*
