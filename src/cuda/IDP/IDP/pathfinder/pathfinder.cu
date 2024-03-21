@@ -10,8 +10,7 @@
 
 #define BENCH_PRINT
 
-#define USIM
-#include "../common.h"
+#include "../../common.h"
 
 void run(int argc, char** argv);
 
