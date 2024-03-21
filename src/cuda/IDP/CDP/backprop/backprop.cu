@@ -44,8 +44,7 @@
 #define MOMENTUM 0.3  //momentum value
 #define NUM_THREAD 4  //OpenMP threads
 
-//#define USIM
-#include "../common.h"
+#include "../../common.h"
 
 int layer_size = 0;
 unsigned int num_threads = 0;
@@ -529,7 +528,6 @@ int
 main( int argc, char** argv) 
 {
     cudaMemGetInfo(&free_memory, &total_memory);
-    printf("(main) free: %llu, total: %llu\n", free_memory, total_memory);
 	setup(argc, argv);
 }
 
@@ -622,9 +620,6 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 					      in,
 					      hid);
 #endif
-
-
-  cudaThreadSynchronize();
   
   cudaDeviceSynchronize();
   cudaError_t error = cudaGetLastError();

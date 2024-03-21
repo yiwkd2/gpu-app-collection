@@ -21,8 +21,7 @@
 #include <math.h>
 #include <cuda.h>
 
-//#define USIM
-#include "../common.h"
+#include "../../common.h"
 
 #define MAX_THREADS_PER_BLOCK 512
 
