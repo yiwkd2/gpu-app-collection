@@ -25,8 +25,7 @@
 #define DIM_THREAD_BLOCK_X 32
 #define DIM_THREAD_BLOCK_Y 8
 
-#define USIM
-#include "../common.h"
+#include "../../common.h"
 
 uint64_t NI;
 uint64_t NJ;
