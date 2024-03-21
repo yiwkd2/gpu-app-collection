@@ -18,7 +18,7 @@ accelwattch_hw_power: rodinia-3.1_hw_power parboil_hw_power cuda_samples-11.0_hw
 #Disable clean for now, It has a bug!
 # clean_dragon-naive clean_pannotia clean_proxy-apps
 
-clean: clean_rodinia_2.0-ft clean_dragon-cdp  clean_ispass-2009 clean_lonestargpu-2.0 clean_custom_apps clean_parboil clean_cutlass clean_rodinia-3.1 clean_heterosync clean_UVMSmart_test
+clean: clean_rodinia_2.0-ft clean_dragon-cdp  clean_ispass-2009 clean_lonestargpu-2.0 clean_custom_apps clean_parboil clean_cutlass clean_rodinia-3.1 clean_heterosync clean_IDP
 clean_accelwattch: clean_rodinia-3.1 clean_parboil clean_cutlass clean_cuda_samples clean_cuda_samples_hw_power clean_rodinia-3.1_hw_power clean_parboil_hw_power clean_accelwattch_ubench
 
 clean_data:
@@ -29,25 +29,47 @@ data:
 	cd ../ && bash ./get_data.sh
 
 ###################################################################################################3
-# UVMSmart Benchmarks
+# IDP benchmarks
 ###################################################################################################3
-UVMSmart_test:
+IDP:
 	mkdir -p $(BINDIR)/$(BINSUBDIR)/
-	cd cuda/UVMSmart_test/; make
-	cp cuda/UVMSmart_test/Managed/2DCONV/2dconv $(BINDIR)/$(BINSUBDIR)/uvm_2dconv
-	cp cuda/UVMSmart_test/Managed/ATAX/atax $(BINDIR)/$(BINSUBDIR)/uvm_atax
-	cp cuda/UVMSmart_test/Managed/AddVectors/add_vectors $(BINDIR)/$(BINSUBDIR)/uvm_add_vectors
-	cp cuda/UVMSmart_test/Managed/FDTD-2D/main $(BINDIR)/$(BINSUBDIR)/uvm_fdtd
-	cp cuda/UVMSmart_test/Managed/StreamTriad/stream_triad $(BINDIR)/$(BINSUBDIR)/uvm_stream_triad
-	cp cuda/UVMSmart_test/Managed/backprop/backprop $(BINDIR)/$(BINSUBDIR)/uvm_backprop
-	cp cuda/UVMSmart_test/Managed/bfs/bfs $(BINDIR)/$(BINSUBDIR)/uvm_bfs
-	cp cuda/UVMSmart_test/Managed/hotspot/hotspot $(BINDIR)/$(BINSUBDIR)/uvm_hotspot
-	cp cuda/UVMSmart_test/Managed/nw/needle $(BINDIR)/$(BINSUBDIR)/uvm_needle
-	cp cuda/UVMSmart_test/Managed/pathfinder/pathfinder $(BINDIR)/$(BINSUBDIR)/uvm_pathfinder
-	cp cuda/UVMSmart_test/Managed/ra/main $(BINDIR)/$(BINSUBDIR)/uvm_ra
-	cp cuda/UVMSmart_test/Managed/srad_v2/srad $(BINDIR)/$(BINSUBDIR)/uvm_srad
-	cp cuda/UVMSmart_test/Managed/sssp/sssp $(BINDIR)/$(BINSUBDIR)/uvm_sssp
-	cp cuda/UVMSmart_test/Managed/stencil/main $(BINDIR)/$(BINSUBDIR)/uvm_stencil
+	cd cuda/IDP/; make
+	cp cuda/IDP/CtE/2DCONV/2dconv_CtE $(BINDIR)/$(BINSUBDIR)/2dconv_CtE
+	cp cuda/IDP/CtE/backprop/backprop_CtE $(BINDIR)/$(BINSUBDIR)/backprop_CtE
+	cp cuda/IDP/CtE/bfs/bfs_CtE $(BINDIR)/$(BINSUBDIR)/bfs_CtE
+	cp cuda/IDP/CtE/FDTD-2D/fdtd2d_CtE $(BINDIR)/$(BINSUBDIR)/fdtd2d_CtE
+	cp cuda/IDP/CtE/hotspot/hotspot_CtE $(BINDIR)/$(BINSUBDIR)/hotspot_CtE
+	cp cuda/IDP/CtE/nw/nw_CtE $(BINDIR)/$(BINSUBDIR)/nw_CtE
+	cp cuda/IDP/CtE/pathfinder/pathfinder_CtE $(BINDIR)/$(BINSUBDIR)/pathfinder_CtE
+	cp cuda/IDP/CtE/srad_v2/srad_CtE $(BINDIR)/$(BINSUBDIR)/srad_CtE
+	cp cuda/IDP/CtE/sssp/sssp_CtE $(BINDIR)/$(BINSUBDIR)/sssp_CtE
+	cp cuda/IDP/CDP/2DCONV/2dconv_CDP $(BINDIR)/$(BINSUBDIR)/2dconv_CDP
+	cp cuda/IDP/CDP/backprop/backprop_CDP $(BINDIR)/$(BINSUBDIR)/backprop_CDP
+	cp cuda/IDP/CDP/bfs/bfs_CDP $(BINDIR)/$(BINSUBDIR)/bfs_CDP
+	cp cuda/IDP/CDP/FDTD-2D/fdtd2d_CDP $(BINDIR)/$(BINSUBDIR)/fdtd2d_CDP
+	cp cuda/IDP/CDP/hotspot/hotspot_CDP $(BINDIR)/$(BINSUBDIR)/hotspot_CDP
+	cp cuda/IDP/CDP/nw/nw_CDP $(BINDIR)/$(BINSUBDIR)/nw_CDP
+	cp cuda/IDP/CDP/pathfinder/pathfinder_CDP $(BINDIR)/$(BINSUBDIR)/pathfinder_CDP
+	cp cuda/IDP/CDP/srad_v2/srad_CDP $(BINDIR)/$(BINSUBDIR)/srad_CDP
+	cp cuda/IDP/CDP/sssp/sssp_CDP $(BINDIR)/$(BINSUBDIR)/sssp_CDP
+	cp cuda/IDP/CDP/2DCONV/2dconv_CDP_hw $(BINDIR)/$(BINSUBDIR)/2dconv_CDP_hw
+	cp cuda/IDP/CDP/backprop/backprop_CDP_hw $(BINDIR)/$(BINSUBDIR)/backprop_CDP_hw
+	cp cuda/IDP/CDP/bfs/bfs_CDP_hw $(BINDIR)/$(BINSUBDIR)/bfs_CDP_hw
+	cp cuda/IDP/CDP/FDTD-2D/fdtd2d_CDP_hw $(BINDIR)/$(BINSUBDIR)/fdtd2d_CDP_hw
+	cp cuda/IDP/CDP/hotspot/hotspot_CDP_hw $(BINDIR)/$(BINSUBDIR)/hotspot_CDP_hw
+	cp cuda/IDP/CDP/nw/nw_CDP_hw $(BINDIR)/$(BINSUBDIR)/nw_CDP_hw
+	cp cuda/IDP/CDP/pathfinder/pathfinder_CDP_hw $(BINDIR)/$(BINSUBDIR)/pathfinder_CDP_hw
+	cp cuda/IDP/CDP/srad_v2/srad_CDP_hw $(BINDIR)/$(BINSUBDIR)/srad_CDP_hw
+	cp cuda/IDP/CDP/sssp/sssp_CDP_hw $(BINDIR)/$(BINSUBDIR)/sssp_CDP_hw
+	cp cuda/IDP/IDP/2DCONV/2dconv_IDP $(BINDIR)/$(BINSUBDIR)/2dconv_IDP
+	cp cuda/IDP/IDP/backprop/backprop_IDP $(BINDIR)/$(BINSUBDIR)/backprop_IDP
+	cp cuda/IDP/IDP/bfs/bfs_IDP $(BINDIR)/$(BINSUBDIR)/bfs_IDP
+	cp cuda/IDP/IDP/FDTD-2D/fdtd2d_IDP $(BINDIR)/$(BINSUBDIR)/fdtd2d_IDP
+	cp cuda/IDP/IDP/hotspot/hotspot_IDP $(BINDIR)/$(BINSUBDIR)/hotspot_IDP
+	cp cuda/IDP/IDP/nw/nw_IDP $(BINDIR)/$(BINSUBDIR)/nw_IDP
+	cp cuda/IDP/IDP/pathfinder/pathfinder_IDP $(BINDIR)/$(BINSUBDIR)/pathfinder_IDP
+	cp cuda/IDP/IDP/srad_v2/srad_IDP $(BINDIR)/$(BINSUBDIR)/srad_IDP
+	cp cuda/IDP/IDP/sssp/sssp_IDP $(BINDIR)/$(BINSUBDIR)/sssp_IDP
 
 ###################################################################################################3
 # Rodinia 2.0 Functional Test Stuff
@@ -634,8 +656,8 @@ clean_proxy-apps:
 	chmod +x cuda/proxy-apps-doe/comd/clean.sh
 	( cd cuda/proxy-apps-doe/comd ; ./clean.sh )
 
-clean_UVMSmart_test:
-	cd cuda/UVMSmart_test/; make clean
+clean_IDP:
+	cd cuda/IDP/; make clean
 
 clean_mlperf:
 	rm -rf $(BINDIR)/$(BINSUBDIR)/mlperf_inference
