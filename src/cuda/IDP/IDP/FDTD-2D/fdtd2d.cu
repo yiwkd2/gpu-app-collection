@@ -31,8 +31,7 @@ uint64_t NY;
 #define DIM_THREAD_BLOCK_X 32
 #define DIM_THREAD_BLOCK_Y 8
 
-#define USIM
-#include "../common.h"
+#include "../../common.h"
 
 /* Can switch DATA_TYPE between float and double */
 typedef float DATA_TYPE;
