@@ -86,6 +86,13 @@ runTest( int argc, char** argv)
 	usage(argc, argv);
     }
 
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
 	size_I = cols * rows;
     size_R = (r2-r1+1)*(c2-c1+1);   
 
@@ -143,15 +150,8 @@ runTest( int argc, char** argv)
     for (int k = 0;  k < size_I; k++ ) {
      	J[k] = (float)exp(I[k]) ;
     }
-
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-
-	//printf("Start the SRAD main loop\n");
- for (iter=0; iter< niter; iter++){
+	printf("Start the SRAD main loop\n");
+ for (iter=0; iter< niter; iter++){     
 		sum=0; sum2=0;
         for (int i=r1; i<=r2; i++) {
             for (int j=c1; j<=c2; j++) {
@@ -228,6 +228,7 @@ runTest( int argc, char** argv)
     dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 dimGrid(block_x , block_y);
     
+
 	//Copy data from main memory to device memory
 	cudaMemcpy(J_cuda, J, sizeof(float) * size_I, cudaMemcpyHostToDevice);
 
@@ -240,18 +241,8 @@ runTest( int argc, char** argv)
 
 #endif   
 }
+
     cudaThreadSynchronize();
-
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-	
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-    printf("Elapsed Time: %fms\n", milliseconds);
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
 
 #define OUTPUT
 #ifdef OUTPUT
@@ -281,7 +272,19 @@ runTest( int argc, char** argv)
 	cudaFree(N_C);
 	cudaFree(S_C);
 #endif 
-	free(c);  
+	free(c);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+	
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+  
 }
 
 

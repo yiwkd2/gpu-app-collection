@@ -188,6 +188,12 @@ int main(int argc, char** argv)
 
 void run(int argc, char** argv)
 {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
     init(argc, argv);
 
     /* --------------- pyramid parameters --------------- */
@@ -203,32 +209,16 @@ void run(int argc, char** argv)
 
     cudaMalloc((void**)&gpuResult[0], sizeof(int)*cols);
     cudaMalloc((void**)&gpuResult[1], sizeof(int)*cols);
-    cudaMalloc((void**)&gpuWall, sizeof(int)*(size-cols));
-
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-
     cudaMemcpy(gpuResult[0], data, sizeof(int)*cols, cudaMemcpyHostToDevice);
+    cudaMalloc((void**)&gpuWall, sizeof(int)*(size-cols));
     cudaMemcpy(gpuWall, data+cols, sizeof(int)*(size-cols), cudaMemcpyHostToDevice);
+
 
     int final_ret = calc_path(gpuWall, gpuResult, rows, cols, \
 	 pyramid_height, blockCols, borderCols);
 
     cudaMemcpy(result, gpuResult[final_ret], sizeof(int)*cols, cudaMemcpyDeviceToHost);
 
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-	
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-    printf("Elapsed Time: %fms\n", milliseconds);
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
 
 #ifdef BENCH_PRINT
     for (int i = 0; i < cols; i++)
@@ -247,5 +237,16 @@ void run(int argc, char** argv)
     cudaFreeHost(data);
     cudaFreeHost(wall);
     cudaFreeHost(result);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+	
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 }
 

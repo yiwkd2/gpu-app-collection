@@ -43,6 +43,15 @@ IDP:
 	cp cuda/IDP/CtE/pathfinder/pathfinder_CtE $(BINDIR)/$(BINSUBDIR)/pathfinder_CtE
 	cp cuda/IDP/CtE/srad_v2/srad_CtE $(BINDIR)/$(BINSUBDIR)/srad_CtE
 	cp cuda/IDP/CtE/sssp/sssp_CtE $(BINDIR)/$(BINSUBDIR)/sssp_CtE
+	cp cuda/IDP/ZC/2DCONV/2dconv_ZC $(BINDIR)/$(BINSUBDIR)/2dconv_ZC
+	cp cuda/IDP/ZC/backprop/backprop_ZC $(BINDIR)/$(BINSUBDIR)/backprop_ZC
+	cp cuda/IDP/ZC/bfs/bfs_ZC $(BINDIR)/$(BINSUBDIR)/bfs_ZC
+	cp cuda/IDP/ZC/FDTD-2D/fdtd2d_ZC $(BINDIR)/$(BINSUBDIR)/fdtd2d_ZC
+	cp cuda/IDP/ZC/hotspot/hotspot_ZC $(BINDIR)/$(BINSUBDIR)/hotspot_ZC
+	cp cuda/IDP/ZC/nw/nw_ZC $(BINDIR)/$(BINSUBDIR)/nw_ZC
+	cp cuda/IDP/ZC/pathfinder/pathfinder_ZC $(BINDIR)/$(BINSUBDIR)/pathfinder_ZC
+	cp cuda/IDP/ZC/srad_v2/srad_ZC $(BINDIR)/$(BINSUBDIR)/srad_ZC
+	cp cuda/IDP/ZC/sssp/sssp_ZC $(BINDIR)/$(BINSUBDIR)/sssp_ZC
 	cp cuda/IDP/CDP/2DCONV/2dconv_CDP $(BINDIR)/$(BINSUBDIR)/2dconv_CDP
 	cp cuda/IDP/CDP/backprop/backprop_CDP $(BINDIR)/$(BINSUBDIR)/backprop_CDP
 	cp cuda/IDP/CDP/bfs/bfs_CDP $(BINDIR)/$(BINSUBDIR)/bfs_CDP

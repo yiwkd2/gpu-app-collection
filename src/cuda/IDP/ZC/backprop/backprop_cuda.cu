@@ -60,6 +60,12 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   dim3  grid( 1 , num_blocks);
   dim3  threads(16 , 16);
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
   // [USIM] USIM requires to allocate host memory using cudaMallocHost
   // So replace net->input_units and net->hidden_delta
   float *tmp_input, *tmp_hidden_delta;
@@ -107,12 +113,6 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 
 #endif
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-
 #ifdef GPU
  
   printf("Performing GPU computation\n");
@@ -131,6 +131,7 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 											  in,
 											  hid);
  
+  cudaThreadSynchronize();
   
   cudaError_t error = cudaGetLastError();
 	if (error != cudaSuccess) {
@@ -183,17 +184,6 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   cudaMemcpy(net->input_units, input_cuda, (in + 1) * sizeof(float), cudaMemcpyDeviceToHost);
   cudaMemcpy(input_weights_one_dim, input_hidden_cuda, (in + 1) * (hid + 1) * sizeof(float), cudaMemcpyDeviceToHost);
 
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-	
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-    printf("Elapsed Time: %fms\n", milliseconds);
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
-
   FILE* ofile = fopen("result.txt", "w");
   unsigned long long int checksum = 0; 
   for (int x = 0; x < (in + 1) * (hid + 1); x++) {
@@ -217,6 +207,17 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   cudaFreeHost(partial_sum);
   cudaFreeHost(input_weights_one_dim);
   cudaFreeHost(input_weights_prev_one_dim);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+	
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
   // [USIM] replace net->input_units and net->hidden_delta again...
   tmp_input = alloc_1d_dbl(in + 1);

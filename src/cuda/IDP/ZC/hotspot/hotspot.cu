@@ -295,6 +295,12 @@ void run(int argc, char** argv)
 	
     size=grid_rows*grid_cols;
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
     /* --------------- pyramid parameters --------------- */
     # define EXPAND_RATE 2// add one iteration will extend the pyramid base by 2 per each borderline
     int borderCols = (pyramid_height)*EXPAND_RATE/2;
@@ -320,22 +326,24 @@ void run(int argc, char** argv)
     float *MatrixTemp[2], *MatrixPower;
     cudaMalloc((void**)&MatrixTemp[0], sizeof(float)*size);
     cudaMalloc((void**)&MatrixTemp[1], sizeof(float)*size);
-    cudaMalloc((void**)&MatrixPower, sizeof(float)*size);
-
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-
     cudaMemcpy(MatrixTemp[0], FilesavingTemp, sizeof(float)*size, cudaMemcpyHostToDevice);
-    cudaMemcpy(MatrixPower, FilesavingPower, sizeof(float)*size, cudaMemcpyHostToDevice);
 
-    //printf("Start computing the transient temperature\n");
+    cudaMalloc((void**)&MatrixPower, sizeof(float)*size);
+    cudaMemcpy(MatrixPower, FilesavingPower, sizeof(float)*size, cudaMemcpyHostToDevice);
+    printf("Start computing the transient temperature\n");
     int ret = compute_tran_temp(MatrixPower,MatrixTemp,grid_cols,grid_rows, \
 	 total_iterations,pyramid_height, blockCols, blockRows, borderCols, borderRows);
-	//printf("Ending simulation\n");
+	printf("Ending simulation\n");
     cudaMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float)*size, cudaMemcpyDeviceToHost);
+
+    writeoutput(MatrixOut,grid_rows, grid_cols, ofile);
+
+    cudaFree(MatrixPower);
+    cudaFree(MatrixTemp[0]);
+    cudaFree(MatrixTemp[1]);
+    cudaFreeHost(MatrixOut);
+    cudaFreeHost(FilesavingTemp);
+    cudaFreeHost(FilesavingPower);
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
@@ -347,13 +355,4 @@ void run(int argc, char** argv)
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
-
-    writeoutput(MatrixOut,grid_rows, grid_cols, ofile);
-
-    cudaFree(MatrixPower);
-    cudaFree(MatrixTemp[0]);
-    cudaFree(MatrixTemp[1]);
-    cudaFreeHost(MatrixOut);
-    cudaFreeHost(FilesavingTemp);
-    cudaFreeHost(FilesavingPower);
 }

@@ -95,6 +95,12 @@ void runTest( int argc, char** argv)
 	exit(1);
 	}
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
 	max_rows = max_rows + 1;
 	max_cols = max_cols + 1;
     cudaMallocHost(&referrence, max_rows * max_cols * sizeof(int));
@@ -138,12 +144,6 @@ void runTest( int argc, char** argv)
 	cudaMalloc((void**)& referrence_cuda, sizeof(int)*size);
 	cudaMalloc((void**)& matrix_cuda, sizeof(int)*size);
 	
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-
 	cudaMemcpy(referrence_cuda, referrence, sizeof(int) * size, cudaMemcpyHostToDevice);
 	cudaMemcpy(matrix_cuda, input_itemsets, sizeof(int) * size, cudaMemcpyHostToDevice);
 
@@ -151,7 +151,7 @@ void runTest( int argc, char** argv)
 	dim3 dimBlock(BLOCK_SIZE, 1);
 	int block_width = ( max_cols - 1 )/BLOCK_SIZE;
 
-	//printf("Processing top-left matrix\n");
+	printf("Processing top-left matrix\n");
 	//process top-left matrix
 	for( int i = 1 ; i <= block_width ; i++){
 		dimGrid.x = i;
@@ -159,7 +159,7 @@ void runTest( int argc, char** argv)
 		needle_cuda_shared_1<<<dimGrid, dimBlock>>>(referrence_cuda, matrix_cuda
 		                                      ,max_cols, penalty, i, block_width); 
 	}
-	//printf("Processing bottom-right matrix\n");
+	printf("Processing bottom-right matrix\n");
     //process bottom-right matrix
 	for( int i = block_width - 1  ; i >= 1 ; i--){
 		dimGrid.x = i;
@@ -169,17 +169,6 @@ void runTest( int argc, char** argv)
 	}
 
     cudaMemcpy(output_itemsets, matrix_cuda, sizeof(int) * size, cudaMemcpyDeviceToHost);
-
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-    printf("Elapsed Time: %fms\n", milliseconds);
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
 	
 #define TRACEBACK
 #ifdef TRACEBACK
@@ -247,6 +236,17 @@ void runTest( int argc, char** argv)
 
 	cudaFreeHost(referrence);
 	cudaFreeHost(input_itemsets);
-	cudaFreeHost(output_itemsets);	
+	cudaFreeHost(output_itemsets);
+	
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 }
 
