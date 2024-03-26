@@ -98,9 +98,18 @@ int main(int argc, char *argv[])
 
 	cudaMallocManaged( &A, NI*NJ*sizeof(DATA_TYPE) );
 	cudaMallocManaged( &B, NI*NJ*sizeof(DATA_TYPE) );
+    printf("A: %p, B: %p\n", A, B);
 
 	//initialize the arrays
 	init(A);
+
+	for (int i = 0; i < NI; ++i)
+    	{
+		for (int j = 0; j < NJ; ++j)
+		{
+			B[i*NJ + j] = 0;
+        	}
+    	}
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
