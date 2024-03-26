@@ -25,8 +25,8 @@
 
 #define fastcopy(to,from,len)\
 {\
-  register char *_to,*_from;\
-  register int _i,_l;\
+  char *_to,*_from;\
+  int _i,_l;\
   _to = (char *)(to);\
   _from = (char *)(from);\
   _l = (len);\
@@ -468,15 +468,14 @@ BPNN *bpnn_read(char* filename)
 void load(BPNN *net)
 {
   float *units;
-  int nr, nc, imgsize, i, j, k;
+  int nr, k;
 
   nr = layer_size;
   
-  imgsize = nr * nc;
   units = net->input_units;
 
   k = 1;
-  for (i = 0; i < nr; i++) {
+  for (int i = 0; i < nr; i++) {
 	  units[k] = (float) rand()/RAND_MAX ;
 	  k++;
     }
@@ -504,7 +503,6 @@ int setup(int argc, char *argv[])
   srand(seed);
 
   BPNN *net;
-  int i;
   float out_err, hid_err;
   net = bpnn_create(layer_size, 16, 1); // (16, 1 can not be changed)
   
@@ -552,12 +550,6 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   total_malloc += (hid + 1) * sizeof(float);
   total_malloc += num_blocks * WIDTH * sizeof(float);
   reserve_gpu_memory();
-
-  cudaEvent_t start, stop;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-
-  cudaEventRecord(start);
   
   cudaMallocManaged((void**) &output_hidden_cuda, (hid + 1) * sizeof(float));
   cudaMallocManaged((void**) &hidden_partial_sum, num_blocks * WIDTH * sizeof(float));
@@ -600,9 +592,13 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 
 #ifdef GPU
  
-  printf("Performing GPU computation\n");
+  //printf("Performing GPU computation\n");
   
-  //printf("in= %d, hid = %d, numblocks = %d\n", in, hid, num_blocks);
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
+  cudaEventRecord(start);
   
 
 #ifdef PREF
@@ -684,6 +680,31 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 
   cudaDeviceSynchronize();
 
+  // emulate CPU access
+  float dummy;
+  for(int i = 0; i < in + 1; i ++) {
+    HOST_ACCESS(READ, &net->input_units[i]);
+    dummy = net->input_units[i];
+  }
+  for(int i = 0; i < in + 1; i ++){
+    for(int j = 0; j < hid + 1; j++) {
+      HOST_ACCESS(READ, &net->input_weights2[i*(hid+1)+j]);
+      dummy = net->input_weights2[i*(hid+1)+j];
+    }
+  }
+
+  cudaEventRecord(stop);
+  cudaEventSynchronize(stop);
+
+  float milliseconds = 0;
+  cudaEventElapsedTime(&milliseconds, start, stop);
+
+  printf("Elapsed Time: %fms\n", milliseconds);
+
+  cudaEventDestroy(start);
+  cudaEventDestroy(stop);
+
+
   /*
   cudaMemGetInfo(&free_memory, &total_memory);
   printf("free: %llu, total: %llu\n", free_memory, total_memory);
@@ -699,14 +720,12 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   FILE *fp2 = fopen("result.txt","w");
   fprintf(fp2,"Input_units:\n");
   for(int i = 0; i < in + 1; i ++) {
-    HOST_ACCESS(READ, &net->input_units[i]);
     fprintf(fp2,"%f ", net->input_units[i]);
   }
   fprintf(fp2,"\n");
   fprintf(fp2,"Input_weight_one_dim:\n");
   for(int i = 0; i < in + 1; i ++){
     for(int j = 0; j < hid + 1; j++) {
-      HOST_ACCESS(READ, &net->input_weights2[i*(hid+1)+j]);
       fprintf(fp2,"%f ", net->input_weights2[i*(hid+1)+j]);
     }
     fprintf(fp2,"\n");
@@ -714,17 +733,6 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   fclose(fp2);
   
 #endif
-
-  cudaEventRecord(stop);
-  cudaEventSynchronize(stop);
-
-  float milliseconds = 0;
-  cudaEventElapsedTime(&milliseconds, start, stop);
-
-  printf("Elapsed Time: %fms\n", milliseconds);
-
-  cudaEventDestroy(start);
-  cudaEventDestroy(stop);
 
 #endif   
   

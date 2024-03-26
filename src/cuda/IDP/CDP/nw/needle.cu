@@ -75,7 +75,6 @@ void usage(int argc, char **argv)
 void runTest( int argc, char** argv) 
 {
     int max_rows, max_cols, penalty;
-    float dev_mem_ratio;
 	int *itemsets,  *referrence;
 	int size;
 	 
@@ -106,15 +105,8 @@ void runTest( int argc, char** argv)
     total_malloc += size * sizeof(int);
     reserve_gpu_memory();
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-
 	cudaMallocManaged(&referrence, sizeof(int)*size);
-	cudaMallocManaged(&itemsets, sizeof(int)*size);
-	
+	cudaMallocManaged(&itemsets, sizeof(int)*size);	
 
 	if (!itemsets)
 		fprintf(stderr, "error: can not allocate memory");
@@ -170,8 +162,14 @@ void runTest( int argc, char** argv)
 	dim3 dimBlock(BLOCK_SIZE, 1);
 	int block_width = ( max_cols - 1 )/BLOCK_SIZE;
 
-	printf("Processing top-left matrix\n");
-    fflush(stdout);
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
+	//printf("Processing top-left matrix\n");
+    //fflush(stdout);
 	
 	//process top-left matrix
 	for( int i = 1 ; i <= block_width ; i++){
@@ -181,12 +179,11 @@ void runTest( int argc, char** argv)
 		needle_cuda_shared_1<<<dimGrid, dimBlock, 0, stream3>>>(referrence, itemsets, max_cols, penalty, i, block_width); 
 #else
 		needle_cuda_shared_1<<<dimGrid, dimBlock>>>(referrence, itemsets, max_cols, penalty, i, block_width); 
-        cudaDeviceSynchronize();
 #endif
 	}
 	
-	printf("Processing bottom-right matrix\n");
-    fflush(stdout);
+	//printf("Processing bottom-right matrix\n");
+    //fflush(stdout);
 
     	//process bottom-right matrix
 	for( int i = block_width - 1  ; i >= 1 ; i--){
@@ -196,9 +193,79 @@ void runTest( int argc, char** argv)
 		needle_cuda_shared_2<<<dimGrid, dimBlock, 0, stream3>>>(referrence, itemsets, max_cols, penalty, i, block_width); 
 #else
 		needle_cuda_shared_2<<<dimGrid, dimBlock>>>(referrence, itemsets, max_cols, penalty, i, block_width);
-        cudaDeviceSynchronize();
 #endif
 	}
+
+    // emulate host access
+    int dummy;
+	for (int i = max_rows - 2, j = max_rows - 2; i>=0, j>=0;){
+		int nw, n, w, traceback;
+		if ( i == max_rows - 2 && j == max_rows - 2 ) {
+            HOST_ACCESS(READ, &itemsets[ i * max_cols + j]);
+            dummy = itemsets[i * max_cols + j];
+        }
+
+		if ( i == 0 && j == 0 )
+           		break;
+		if ( i > 0 && j > 0 ){
+            HOST_ACCESS(READ, &itemsets[ (i - 1) * max_cols + j - 1 ]);
+			nw = itemsets[(i - 1) * max_cols + j - 1];
+            HOST_ACCESS(READ, &itemsets[ i * max_cols + j - 1 ]);
+		    w  = itemsets[ i * max_cols + j - 1 ];
+            HOST_ACCESS(READ, &itemsets[ (i - 1) * max_cols + j ]);
+            n  = itemsets[(i - 1) * max_cols + j];
+		}
+		else if ( i == 0 ){
+		    	nw = n = LIMIT;
+                HOST_ACCESS(READ, &itemsets[ i * max_cols + j - 1 ]);
+		    	w  = itemsets[ i * max_cols + j - 1 ];
+		}
+		else if ( j == 0 ){
+		    	nw = w = LIMIT;
+                HOST_ACCESS(READ, &itemsets[ (i - 1) * max_cols + j ]);
+            	n  = itemsets[(i - 1) * max_cols + j];
+		}
+		else{
+		}
+
+		//traceback = maximum(nw, w, n);
+		int new_nw, new_w, new_n;
+        HOST_ACCESS(READ, &referrence[ i * max_cols + j ]);
+		new_nw = nw + referrence[i * max_cols + j];
+		new_w = w - penalty;
+		new_n = n - penalty;
+		
+		traceback = maximum(new_nw, new_w, new_n);
+		if(traceback == new_nw)
+			traceback = nw;
+		if(traceback == new_w)
+			traceback = w;
+		if(traceback == new_n)
+            		traceback = n;
+
+		if(traceback == nw )
+			{i--; j--; continue;}
+
+        	else if(traceback == w )
+			{j--; continue;}
+
+        	else if(traceback == n )
+			{i--; continue;}
+
+		else
+		;
+	}
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
     /*
     printf("kernel execution is completed. dump memory, (referrence) addr: %p, size: %lx, "
@@ -217,26 +284,20 @@ void runTest( int argc, char** argv)
 	for (int i = max_rows - 2,  j = max_rows - 2; i>=0, j>=0;){
 		int nw, n, w, traceback;
 		if ( i == max_rows - 2 && j == max_rows - 2 )
-            HOST_ACCESS(READ, &itemsets[ i * max_cols + j]);
 			fprintf(fpo, "%d ", itemsets[ i * max_cols + j]); //print the first element
 		if ( i == 0 && j == 0 )
            		break;
 		if ( i > 0 && j > 0 ){
-            HOST_ACCESS(READ, &itemsets[ (i - 1) * max_cols + j - 1 ]);
 			nw = itemsets[(i - 1) * max_cols + j - 1];
-            HOST_ACCESS(READ, &itemsets[ i * max_cols + j - 1 ]);
 		    	w  = itemsets[ i * max_cols + j - 1 ];
-            HOST_ACCESS(READ, &itemsets[ (i - 1) * max_cols + j ]);
             		n  = itemsets[(i - 1) * max_cols + j];
 		}
 		else if ( i == 0 ){
 		    	nw = n = LIMIT;
-                HOST_ACCESS(READ, &itemsets[ i * max_cols + j - 1 ]);
 		    	w  = itemsets[ i * max_cols + j - 1 ];
 		}
 		else if ( j == 0 ){
 		    	nw = w = LIMIT;
-                HOST_ACCESS(READ, &itemsets[ (i - 1) * max_cols + j ]);
             	   	n  = itemsets[(i - 1) * max_cols + j];
 		}
 		else{
@@ -244,7 +305,6 @@ void runTest( int argc, char** argv)
 
 		//traceback = maximum(nw, w, n);
 		int new_nw, new_w, new_n;
-        HOST_ACCESS(READ, &referrence[ i * max_cols + j ]);
 		new_nw = nw + referrence[i * max_cols + j];
 		new_w = w - penalty;
 		new_n = n - penalty;
@@ -278,17 +338,6 @@ void runTest( int argc, char** argv)
 
 	cudaFree(referrence);
 	cudaFree(itemsets);
-
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-    printf("Elapsed Time: %fms\n", milliseconds);
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
 
     MEM_TEST();
 }

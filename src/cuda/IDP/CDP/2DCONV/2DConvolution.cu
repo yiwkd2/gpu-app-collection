@@ -92,12 +92,6 @@ int main(int argc, char *argv[])
 	DATA_TYPE* A;
 	DATA_TYPE* B;  
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-
     total_malloc += NI*NJ*sizeof(DATA_TYPE);
     total_malloc += NI*NJ*sizeof(DATA_TYPE);
     reserve_gpu_memory();
@@ -108,21 +102,19 @@ int main(int argc, char *argv[])
 	//initialize the arrays
 	init(A);
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
 	convolution2DCuda(A, B);
-	
-	FILE *fp;
 
-	fp = fopen("result_2DConv.txt","a+");
-
+    // emulate host access
 	for(int i = 0; i < NI*NJ; i+= 10000) {
         HOST_ACCESS(READ, &B[i]);
-		fprintf(fp, "%lf\n", B[i]);
+        float tmp = B[i];
 	}
-	
-	fclose(fp);
-
-	cudaFree(A);
-	cudaFree(B);
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
@@ -134,6 +126,19 @@ int main(int argc, char *argv[])
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
+	
+	FILE *fp;
+
+	fp = fopen("result_2DConv.txt","a+");
+
+	for(int i = 0; i < NI*NJ; i+= 10000) {
+		fprintf(fp, "%lf\n", B[i]);
+	}
+	
+	fclose(fp);
+
+	cudaFree(A);
+	cudaFree(B);
 
     MEM_TEST();
 	

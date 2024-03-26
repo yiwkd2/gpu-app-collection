@@ -41,14 +41,6 @@ void run(int argc, char** argv);
 #define pin_stats_dump(cycles)    printf("timer: %Lu\n", cycles)
 
 
-
-void 
-fatal(char *s)
-{
-	fprintf(stderr, "error: %s\n", s);
-
-}
-
 void writeoutput(float *vect, int grid_rows, int grid_cols, char *file){
 
 	int i,j, index=0;
@@ -62,7 +54,6 @@ void writeoutput(float *vect, int grid_rows, int grid_cols, char *file){
 	for (i=0; i < grid_rows; i++) 
 	 for (j=0; j < grid_cols; j++)
 	 {
-         HOST_ACCESS(READ, &vect[i*grid_cols+j]);
 		 sprintf(str, "%d\t%g\n", index, vect[i*grid_cols+j]);
 		 fputs(str,fp);
 		 index++;
@@ -88,10 +79,10 @@ void readinput(float *vect, int grid_rows, int grid_cols, char *file){
 	 {
 		fgets(str, STR_SIZE, fp);
 		if (feof(fp))
-			fatal("not enough lines in file");
+            fprintf(stderr, "error: not enough lines in file\n");
 		//if ((sscanf(str, "%d%f", &index, &val) != 2) || (index != ((i-1)*(grid_cols-2)+j-1)))
 		if ((sscanf(str, "%f", &val) != 1))
-			fatal("invalid file format");
+            fprintf(stderr, "error: invalid file format\n");
 		vect[i*grid_cols+j] = val;
 	}
 
@@ -312,12 +303,6 @@ void run(int argc, char** argv)
 	
     size=grid_rows*grid_cols;
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-
     /* --------------- pyramid parameters --------------- */
     # define EXPAND_RATE 2// add one iteration will extend the pyramid base by 2 per each borderline
     int borderCols = (pyramid_height)*EXPAND_RATE/2;
@@ -339,7 +324,7 @@ void run(int argc, char** argv)
     cudaMallocManaged((void**)&MatrixPower, sizeof(float)*size);
     
     if( !MatrixPower || !MatrixTemp[0] || !MatrixTemp[1])
-        fatal("unable to allocate memory");
+        fprintf(stderr, "error: unable to allocate memory\n");
 
     printf("pyramidHeight: %d\ngridSize: [%d, %d]\nborder:[%d, %d]\nblockGrid:[%d, %d]\ntargetBlock:[%d, %d]\n",\
 	pyramid_height, grid_cols, grid_rows, borderCols, borderRows, blockCols, blockRows, smallBlockCol, smallBlockRow);
@@ -361,19 +346,28 @@ void run(int argc, char** argv)
     cudaMemPrefetchAsync( MatrixPower, sizeof(float)*size, device, stream2);
 #endif
 
-    printf("Start computing the transient temperature\n");
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
+    //printf("Start computing the transient temperature\n");
     int ret = compute_tran_temp(MatrixPower,MatrixTemp,grid_cols,grid_rows, \
 	 total_iterations,pyramid_height, blockCols, blockRows, borderCols, borderRows);
-	printf("Ending simulation\n");
+	//printf("Ending simulation\n");
 
     // Wait for GPU to finish before accessing on host
     cudaDeviceSynchronize();
-	
-    writeoutput(MatrixTemp[ret],grid_rows, grid_cols, ofile);
-
-    cudaFree(MatrixPower);
-    cudaFree(MatrixTemp[0]);
-    cudaFree(MatrixTemp[1]);
+    
+    // emulate host access
+    float dummy;
+	for (int i=0; i < grid_rows; i++) 
+	 for (int j=0; j < grid_cols; j++)
+	 {
+         HOST_ACCESS(READ, &MatrixTemp[ret][i*grid_cols+j]);
+         dummy = MatrixTemp[ret][i*grid_cols+j];
+	 }
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
@@ -385,6 +379,12 @@ void run(int argc, char** argv)
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
+	
+    writeoutput(MatrixTemp[ret],grid_rows, grid_cols, ofile);
+
+    cudaFree(MatrixPower);
+    cudaFree(MatrixTemp[0]);
+    cudaFree(MatrixTemp[1]);
 
     MEM_TEST();
 }

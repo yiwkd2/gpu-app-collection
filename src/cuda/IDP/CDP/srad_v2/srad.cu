@@ -77,13 +77,6 @@ runTest( int argc, char** argv)
         usage(argc, argv);
     }
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-
-
 	size_I = cols * rows;
     	size_R = (r2-r1+1)*(c2-c1+1);   
 
@@ -98,14 +91,12 @@ runTest( int argc, char** argv)
     total_malloc += sizeof(float) * size_I;
     reserve_gpu_memory();
 
-	//Allocate device memory
+	//Allocate managed memory
     cudaMallocManaged((void**)& C_cuda, sizeof(float)* size_I);
 	cudaMallocManaged((void**)& E_C, sizeof(float)* size_I);
 	cudaMallocManaged((void**)& W_C, sizeof(float)* size_I);
 	cudaMallocManaged((void**)& S_C, sizeof(float)* size_I);
 	cudaMallocManaged((void**)& N_C, sizeof(float)* size_I);
-	
-	//Allocate managed memory
     cudaMallocManaged((void**)& J_shared, sizeof(float)* size_I);
 	
 	printf("Randomizing the input matrix\n");
@@ -115,7 +106,14 @@ runTest( int argc, char** argv)
     for (int k = 0;  k < size_I; k++ ) {
         J_shared[k] = (float)exp(I[k]) ;
     }
-	printf("Start the SRAD main loop\n");
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
+	//printf("Start the SRAD main loop\n");
 
 #ifdef PREF
 	cudaStream_t stream1;
@@ -128,6 +126,7 @@ runTest( int argc, char** argv)
 		sum=0; sum2=0;
         	for (int i=r1; i<=r2; i++) {
             		for (int j=c1; j<=c2; j++) {
+                        HOST_ACCESS(READ, &J_shared[i * cols + j]);
                 		tmp   = J_shared[i * cols + j];
                 		sum  += tmp ;
                 		sum2 += tmp*tmp;
@@ -155,11 +154,30 @@ runTest( int argc, char** argv)
 		srad_cuda_2<<<dimGrid, dimBlock, 0, stream2>>>(E_C, W_C, N_C, S_C, J_shared, C_cuda, cols, rows, lambda, q0sqr); 
 #else
 		srad_cuda_1<<<dimGrid, dimBlock>>>(E_C, W_C, N_C, S_C, J_shared, C_cuda, cols, rows, q0sqr); 
-        cudaDeviceSynchronize();
 		srad_cuda_2<<<dimGrid, dimBlock>>>(E_C, W_C, N_C, S_C, J_shared, C_cuda, cols, rows, lambda, q0sqr); 
 		cudaDeviceSynchronize();
 #endif
 	}
+
+    // emulate host access
+    float dummy;
+    for( int i = 0 ; i < rows ; i++){
+	for ( int j = 0 ; j < cols ; j++){
+        HOST_ACCESS(READ, &J_shared[i * cols + j]);
+        dummy = J_shared[i * cols + j];
+	}	
+    }
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
 #define OUTPUT
 
@@ -189,17 +207,6 @@ runTest( int argc, char** argv)
 	cudaFree(J_shared);
   
     MEM_TEST();
-
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-    printf("Elapsed Time: %fms\n", milliseconds);
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
 }
 
 

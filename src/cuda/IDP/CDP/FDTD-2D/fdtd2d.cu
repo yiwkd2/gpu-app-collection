@@ -237,12 +237,6 @@ int main(int argc, char *argv[])
 	DATA_TYPE* hz;
 	//DATA_TYPE* hz_outputFromGpu;
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-
 /*
 	_fict_ = (DATA_TYPE*)malloc(tmax*sizeof(DATA_TYPE));
 	ex = (DATA_TYPE*)malloc(NX*(NY+1)*sizeof(DATA_TYPE));
@@ -264,8 +258,32 @@ int main(int argc, char *argv[])
 
 	init_arrays(_fict_, ex, ey, hz);
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
 	//GPU_argv_init();
 	fdtdCuda(_fict_, ex, ey, hz);//, hz_outputFromGpu);
+
+    // emulate host access
+    double dummy;
+	for(int i = 0; i < NX*NY; i+= 1000) {
+        HOST_ACCESS(READ, &hz[i]);
+        dummy = hz[i];
+	}
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
 	//t_start = rtclock();
 	//runFdtd(_fict_, ex, ey, hz);
@@ -282,7 +300,6 @@ int main(int argc, char *argv[])
 	fp = fopen("file.txt","w");
 
 	for(int i = 0; i < NX*NY; i+= 1000) {
-        HOST_ACCESS(READ, &hz[i]);
 		fprintf(fp, "%lf\n", hz[i]);
 	}
 	
@@ -294,19 +311,8 @@ int main(int argc, char *argv[])
 	cudaFree(hz);
 	//free(hz_outputFromGpu);
 
-    MEM_TEST();
-    
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-    printf("Elapsed Time: %fms\n", milliseconds);
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
-    
+    MEM_TEST();    
+ 
 	return 0;
 }
 

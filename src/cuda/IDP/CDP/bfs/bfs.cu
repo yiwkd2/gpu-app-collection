@@ -83,12 +83,6 @@ void BFSGraph( int argc, char** argv)
 
 	fscanf(fp,"%d",&no_of_nodes);
 
-    cudaEvent_t start_, stop_;
-    cudaEventCreate(&start_);
-    cudaEventCreate(&stop_);
-
-    cudaEventRecord(start_);
-
 	int num_of_blocks = 1;
 	int num_of_threads_per_block = no_of_nodes;
 
@@ -220,6 +214,12 @@ void BFSGraph( int argc, char** argv)
     bool *stop;	
     cudaMallocHost((void**) &stop, sizeof(bool));
 
+    cudaEvent_t start_, stop_;
+    cudaEventCreate(&start_);
+    cudaEventCreate(&stop_);
+
+    cudaEventRecord(start_);
+
 	//Call the Kernel untill all the elements of Frontier are not false
 	do
 	{
@@ -237,29 +237,41 @@ void BFSGraph( int argc, char** argv)
 #else
 		Kernel<<< grid, threads, 0 >>>( graph_nodes, graph_edges, graph_mask, updating_graph_mask, graph_visited, cost, no_of_nodes);
 		// check if kernel execution generated and error
-		
-        cudaDeviceSynchronize();
 
 		Kernel2<<< grid, threads, 0 >>>( graph_mask, updating_graph_mask, graph_visited, d_over, no_of_nodes);
 		// check if kernel execution generated and error
-        cudaDeviceSynchronize();
-		
 #endif		
 
         cudaMemcpy( stop, d_over, sizeof(bool), cudaMemcpyDeviceToHost) ;
 		k++;
 	}
 	while(*stop); //if no thread changes this value then the loop stops
-    cudaFreeHost(stop);
 
     cudaDeviceSynchronize();
+
+    // emulate host access
+    int dummy;
+	for(int i=0;i<no_of_nodes;i++) {
+        HOST_ACCESS(READ, &cost[i]);
+        dummy = cost[i];
+    }
+
+    cudaEventRecord(stop_);
+    cudaEventSynchronize(stop_);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start_, stop_);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start_);
+    cudaEventDestroy(stop_);
 
 	printf("Kernel Executed %d times\n",k);
 
 	//Store the result into a file
 	FILE *fpo = fopen("result.txt","w");
 	for(int i=0;i<no_of_nodes;i++) {
-        HOST_ACCESS(READ, &cost[i]);
 		fprintf(fpo,"%d) cost:%d\n",i,cost[i]);
     }
 	fclose(fpo);
@@ -274,17 +286,7 @@ void BFSGraph( int argc, char** argv)
 	cudaFree(graph_visited);
 	cudaFree(cost);
 	cudaFree(d_over);
-
-    cudaEventRecord(stop_);
-    cudaEventSynchronize(stop_);
-
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start_, stop_);
-
-    printf("Elapsed Time: %fms\n", milliseconds);
-
-    cudaEventDestroy(start_);
-    cudaEventDestroy(stop_);
+    cudaFreeHost(stop);
 
     MEM_TEST();
 }

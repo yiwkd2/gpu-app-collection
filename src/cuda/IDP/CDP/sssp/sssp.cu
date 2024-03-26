@@ -278,6 +278,12 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
     bool *h_finalizedVertices;
     cudaMallocHost((void**) &h_finalizedVertices, sizeof(bool) * graph->numVertices);
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
     // --- Initialize mask Ma to false, cost array Ca and Updating cost array Ua to \u221e
     initializeArrays <<<iDivUp(graph->numVertices, BLOCK_SIZE), BLOCK_SIZE >>>(d_finalizedVertices, h_shortestDistances,
                                                             d_updatingShortestDistances, sourceVertex, graph -> numVertices);
@@ -316,6 +322,24 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
     //gpuErrchk(cudaMemcpy(h_shortestDistances, d_shortestDistances, sizeof(float) * graph->numVertices, cudaMemcpyDeviceToHost));
 
     cudaDeviceSynchronize();
+    
+    // emulate host access
+    float dummy;
+    for (int k = 0; k < graph->numVertices; k++) {
+        HOST_ACCESS(READ, &h_shortestDistances[k]);
+        dummy = h_shortestDistances[k];
+    }
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
     cudaFreeHost(h_finalizedVertices);
 
@@ -347,12 +371,6 @@ int main(int argc, char* argv[]) {
 
     // --- Source vertex
     int sourceVertex = 0;
-
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
 
     // --- Allocate memory for arrays
     GraphData graph;
@@ -408,7 +426,6 @@ int main(int argc, char* argv[]) {
     fp = fopen ("output.txt", "w+");
     fprintf(fp,"\nGPU results\n");
     for (int k = 0; k < numVertices; k++) {
-        HOST_ACCESS(READ, &h_shortestDistancesGPU[k]);
         fprintf(fp, "From vertex %i to vertex %i = %f\n", sourceVertex, k,
                 h_shortestDistancesGPU[k]);
     }
@@ -416,17 +433,6 @@ int main(int argc, char* argv[]) {
 
     //free(h_shortestDistancesCPU);
     cudaFree(h_shortestDistancesGPU);
-
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-    printf("Elapsed Time: %fms\n", milliseconds);
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
 
     MEM_TEST();
 

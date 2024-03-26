@@ -200,7 +200,6 @@ int calc_path(int *gpuWall, int *gpuResult[2], int rows, int cols, \
                 MIN(pyramid_height, rows-t-1), 
                 gpuWall, gpuResult[src], gpuResult[dst],
                 cols,rows, t, borderCols);
-        cudaDeviceSynchronize();
 #endif
 	}
         return dst;
@@ -219,12 +218,6 @@ int main(int argc, char** argv)
 
 void run(int argc, char** argv)
 {
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-
     init(argc, argv);
 
     /* --------------- pyramid parameters --------------- */
@@ -248,28 +241,23 @@ void run(int argc, char** argv)
     cudaMemPrefetchAsync( gpuWall, sizeof(int)*(size-cols), DEVICE, stream2);
 #endif
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
     int final_ret = calc_path(gpuWall, gpuResult, rows, cols, \
 	 pyramid_height, blockCols, borderCols);
 
     cudaDeviceSynchronize();
 
-
-#ifdef BENCH_PRINT
-    for (int i = 0; i < cols; i++) {
-        printf("%d ",data[i]) ;
-    }
-    printf("\n") ;
+    // emulate host access
+    int dummy;
     for (int i = 0; i < cols; i++) {
         HOST_ACCESS(READ, &gpuResult[final_ret][i]);
-        printf("%d ",gpuResult[final_ret][i]) ;
+        dummy = gpuResult[final_ret][i];
     }
-    printf("\n") ;
-#endif
-
-
-    cudaFree(gpuWall);
-    cudaFree(gpuResult[0]);
-    cudaFree(gpuResult[1]);
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
@@ -281,6 +269,23 @@ void run(int argc, char** argv)
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
+
+
+#ifdef BENCH_PRINT
+    for (int i = 0; i < cols; i++) {
+        printf("%d ",data[i]) ;
+    }
+    printf("\n") ;
+    for (int i = 0; i < cols; i++) {
+        printf("%d ",gpuResult[final_ret][i]) ;
+    }
+    printf("\n") ;
+#endif
+
+
+    cudaFree(gpuWall);
+    cudaFree(gpuResult[0]);
+    cudaFree(gpuResult[1]);
 
     delete [] data;
 
