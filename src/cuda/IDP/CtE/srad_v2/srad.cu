@@ -240,8 +240,6 @@ runTest( int argc, char** argv)
 
 #endif   
 }
-    cudaThreadSynchronize();
-
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
 	
