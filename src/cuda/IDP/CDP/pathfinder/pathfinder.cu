@@ -43,8 +43,11 @@ init(int argc, char** argv)
     reserve_gpu_memory();
 
     cudaMallocManaged((void**)&gpuResult[0], sizeof(int)*cols);
+    printf("alloc gpuResult[0], size: %lu\n", sizeof(int)*cols);
     cudaMallocManaged((void**)&gpuResult[1], sizeof(int)*cols);
+    printf("alloc gpuResult[1], size: %lu\n", sizeof(int)*cols);
     cudaMallocManaged((void**)&gpuWall, sizeof(int)*(rows*cols - cols));
+    printf("alloc gpuWall, size: %lu\n", sizeof(int)*(rows*cols - cols));
 	
 	int seed = M_SEED;
 	srand(seed);
@@ -284,8 +287,11 @@ void run(int argc, char** argv)
 
 
     cudaFree(gpuWall);
+    printf("free gpuWall\n");
     cudaFree(gpuResult[0]);
+    printf("free gpuResult[0]\n");
     cudaFree(gpuResult[1]);
+    printf("free gpuResult[1]\n");
 
     delete [] data;
 

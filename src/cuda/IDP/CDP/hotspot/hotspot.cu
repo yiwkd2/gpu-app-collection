@@ -319,9 +319,12 @@ void run(int argc, char** argv)
 
     float *MatrixTemp[2], *MatrixPower;
     cudaMallocManaged((void**)&MatrixTemp[0], sizeof(float)*size);
+    printf("alloc MatrixTemp[0], size: %lu\n", sizeof(float)*size);
     cudaMallocManaged((void**)&MatrixTemp[1], sizeof(float)*size);
+    printf("alloc MatrixTemp[1], size: %lu\n", sizeof(float)*size);
 
     cudaMallocManaged((void**)&MatrixPower, sizeof(float)*size);
+    printf("alloc MatrixPower, size: %lu\n", sizeof(float)*size);
     
     if( !MatrixPower || !MatrixTemp[0] || !MatrixTemp[1])
         fprintf(stderr, "error: unable to allocate memory\n");
@@ -383,8 +386,11 @@ void run(int argc, char** argv)
     writeoutput(MatrixTemp[ret],grid_rows, grid_cols, ofile);
 
     cudaFree(MatrixPower);
+    printf("free MatrixPower\n");
     cudaFree(MatrixTemp[0]);
+    printf("free MatrixTemp[0]\n");
     cudaFree(MatrixTemp[1]);
+    printf("free MatrixTemp[1]\n");
 
     MEM_TEST();
 }

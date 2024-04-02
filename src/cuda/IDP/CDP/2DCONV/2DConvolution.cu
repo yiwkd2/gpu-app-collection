@@ -97,8 +97,9 @@ int main(int argc, char *argv[])
     reserve_gpu_memory();
 
 	cudaMallocManaged( &A, NI*NJ*sizeof(DATA_TYPE) );
+    printf("size of A: %lu\n", NI*NJ*sizeof(DATA_TYPE));
 	cudaMallocManaged( &B, NI*NJ*sizeof(DATA_TYPE) );
-    printf("A: %p, B: %p\n", A, B);
+    printf("size of B: %lu\n", NI*NJ*sizeof(DATA_TYPE));
 
 	//initialize the arrays
 	init(A);
@@ -147,7 +148,9 @@ int main(int argc, char *argv[])
 	fclose(fp);
 
 	cudaFree(A);
+    printf("free A\n");
 	cudaFree(B);
+    printf("free B\n");
 
     MEM_TEST();
 	

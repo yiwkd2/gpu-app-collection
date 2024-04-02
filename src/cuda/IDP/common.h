@@ -31,7 +31,7 @@ void reserve_gpu_memory() {
         extra_malloc_size = free_memory -
             (uint64_t) (total_malloc * (float) memory_ratio / 100);
 
-        printf("(before malloc) memory ratio: %f%%",
+        printf("(before malloc) memory ratio: %f%%\n",
                 free_memory / (float) total_malloc * 100);
 
         cudaError_t status = cudaMalloc(&dummy, extra_malloc_size);
@@ -41,7 +41,7 @@ void reserve_gpu_memory() {
             exit(0);
         }
         cudaMemGetInfo(&free_memory, &total_memory);
-        printf("(after malloc) memory ratio: %f%%",
+        printf("(after malloc) memory ratio: %f%%\n",
                 free_memory / (float) total_malloc * 100);
     }
     fflush(stdout);

@@ -106,7 +106,9 @@ void runTest( int argc, char** argv)
     reserve_gpu_memory();
 
 	cudaMallocManaged(&referrence, sizeof(int)*size);
+    printf("alloc referrence, size: %lu\n", sizeof(int)*size);
 	cudaMallocManaged(&itemsets, sizeof(int)*size);	
+    printf("alloc itemsets, size: %lu\n", sizeof(int)*size);
 
 	if (!itemsets)
 		fprintf(stderr, "error: can not allocate memory");
@@ -337,7 +339,9 @@ void runTest( int argc, char** argv)
 #endif
 
 	cudaFree(referrence);
+    printf("free referrence\n");
 	cudaFree(itemsets);
+    printf("free itemsets\n");
 
     MEM_TEST();
 }

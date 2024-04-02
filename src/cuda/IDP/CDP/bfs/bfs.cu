@@ -106,17 +106,21 @@ void BFSGraph( int argc, char** argv)
 	//Allocate the Node list
 	Node* graph_nodes;
 	cudaMallocManaged(  &graph_nodes, sizeof(Node)*no_of_nodes) ;
+    printf("alloc graph_nodes, size: %lu\n", no_of_nodes * sizeof(Node));
 
 	//Allocate the Mask
 	bool* graph_mask;
 	cudaMallocManaged( &graph_mask, sizeof(bool)*no_of_nodes) ;
+    printf("alloc graph_mask, size: %lu\n", no_of_nodes * sizeof(bool));
 
 	bool* updating_graph_mask;
 	cudaMallocManaged( &updating_graph_mask, sizeof(bool)*no_of_nodes) ;
+    printf("alloc updating_graph_mask, size: %lu\n", no_of_nodes * sizeof(bool));
 
 	//Allocate the Visited nodes array
 	bool* graph_visited;
 	cudaMallocManaged( &graph_visited, sizeof(bool)*no_of_nodes) ;
+    printf("alloc graph_visited, size: %lu\n", no_of_nodes * sizeof(bool));
 
 	int start, edgeno;   
 	// initalize the memory
@@ -143,6 +147,7 @@ void BFSGraph( int argc, char** argv)
 	//Allocate the Edge List
 	int* graph_edges;
 	cudaMallocManaged( &graph_edges, sizeof(int)*edge_list_size) ;
+    printf("alloc graph_edges, size: %lu\n", edge_list_size * sizeof(int));
 
 	int id,edgeCost;
 	for(int i=0; i < edge_list_size ; i++)
@@ -160,6 +165,7 @@ void BFSGraph( int argc, char** argv)
 	// allocate mem for the result
 	int* cost;
 	cudaMallocManaged( (void**) &cost, sizeof(int)*no_of_nodes);
+    printf("alloc cost, size: %lu\n", no_of_nodes * sizeof(int));
 
 	for(int i=0;i<no_of_nodes;i++)
 		cost[i]=-1;
@@ -280,12 +286,19 @@ void BFSGraph( int argc, char** argv)
 
 	// cleanup memory
 	cudaFree(graph_nodes);
+    printf("free graph_nodes\n");
 	cudaFree(graph_edges);
+    printf("free graph_edges\n");
 	cudaFree(graph_mask);
+    printf("free graph_mask\n");
 	cudaFree(updating_graph_mask);
+    printf("free updating_graph_mask\n");
 	cudaFree(graph_visited);
+    printf("free graph_visited\n");
 	cudaFree(cost);
+    printf("free cost\n");
 	cudaFree(d_over);
+    printf("free d_over\n");
     cudaFreeHost(stop);
 
     MEM_TEST();

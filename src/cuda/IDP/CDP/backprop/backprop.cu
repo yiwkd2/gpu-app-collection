@@ -124,19 +124,30 @@ BPNN *bpnn_internal_create(int n_in,int n_hidden,int n_out)
   newnet->hidden_n = n_hidden;
   newnet->output_n = n_out;
   newnet->input_units = alloc_1d_dbl(n_in + 1);
+  printf("alloc input_units, size: %lu\n", (n_in + 1) * sizeof(float));
   newnet->hidden_units = alloc_1d_dbl(n_hidden + 1);
+  printf("alloc hidden_units, size: %lu\n", (n_hidden + 1) * sizeof(float));
   newnet->output_units = alloc_1d_dbl(n_out + 1);
+  printf("alloc output_units, size: %lu\n", (n_out + 1) * sizeof(float));
 
   newnet->hidden_delta = alloc_1d_dbl(n_hidden + 1);
+  printf("alloc hidden_delta, size: %lu\n", (n_hidden + 1) * sizeof(float));
   newnet->output_delta = alloc_1d_dbl(n_out + 1);
+  printf("alloc output_delta, size: %lu\n", (n_out + 1) * sizeof(float));
   newnet->target = alloc_1d_dbl(n_out + 1);
+  printf("alloc target, size: %lu\n", (n_out + 1) * sizeof(float));
 
   newnet->input_weights = alloc_1d_dbl( (n_in + 1) * (n_hidden + 1) );
+  printf("alloc input_weights, size: %lu\n", (n_in + 1) * (n_hidden + 1) * sizeof(float));
   newnet->input_weights2 = alloc_1d_dbl( (n_in + 1) * (n_hidden + 1) );
+  printf("alloc input_weights2, size: %lu\n", (n_in + 1) * (n_hidden + 1) * sizeof(float));
   newnet->hidden_weights = alloc_1d_dbl( (n_hidden + 1) * (n_out + 1) );
+  printf("alloc hidden_weights, size: %lu\n", (n_hidden + 1) * (n_out + 1) * sizeof(float));
 
   newnet->input_prev_weights = alloc_1d_dbl( (n_in + 1) * (n_hidden + 1) );
+  printf("alloc input_prev_weights, size: %lu\n", (n_in + 1) * (n_hidden + 1) * sizeof(float));
   newnet->hidden_prev_weights = alloc_1d_dbl( (n_hidden + 1) * (n_out + 1) );
+  printf("alloc hidden_prev_weights, size: %lu\n", (n_hidden + 1) * (n_out + 1) * sizeof(float));
 
   return (newnet);
 }
@@ -145,19 +156,30 @@ BPNN *bpnn_internal_create(int n_in,int n_hidden,int n_out)
 void bpnn_free(BPNN *net)
 {
   cudaFree(net->input_units);
+  printf("free input_units\n");
   cudaFree(net->hidden_units);
+  printf("free hidden_units\n");
   cudaFree(net->output_units);
+  printf("free output_units\n");
 
   cudaFree(net->hidden_delta);
+  printf("free hidden_delta\n");
   cudaFree(net->output_delta);
+  printf("free output_delta\n");
   cudaFree(net->target);
+  printf("free target\n");
 
   cudaFree(net->input_weights);
+  printf("free input_weights\n");
   cudaFree(net->input_weights2);
+  printf("free input_weights2\n");
   cudaFree(net->hidden_weights);
+  printf("free hidden_weights\n");
 
   cudaFree(net->input_prev_weights);
+  printf("free input_prev_weights\n");
   cudaFree(net->hidden_prev_weights);
+  printf("free hidden_prev_weights\n");
 
   free((char *) net);
 }
@@ -539,11 +561,11 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   hid = net->hidden_n;
   out = net->output_n;   
    
-#ifdef GPU  
+#ifdef GPU
   float *output_hidden_cuda;
   float *hidden_partial_sum;
   float sum;
-  num_blocks = in / 16;  
+  num_blocks = in / 16;
   dim3  grid( 1 , num_blocks);
   dim3  threads(16 , 16);
 
@@ -552,7 +574,9 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   reserve_gpu_memory();
   
   cudaMallocManaged((void**) &output_hidden_cuda, (hid + 1) * sizeof(float));
+  printf("alloc output_hidden_cuda, size: %lu\n", (hid + 1) * sizeof(float));
   cudaMallocManaged((void**) &hidden_partial_sum, num_blocks * WIDTH * sizeof(float));
+  printf("alloc hidden_partial_sum, size: %lu\n", num_blocks * WIDTH * sizeof(float));
   
 #endif
 
@@ -713,7 +737,9 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   */
 
   cudaFree(output_hidden_cuda);
+  printf("free output_hidden_cuda\n");
   cudaFree(hidden_partial_sum);
+  printf("free hidden_partial_sum\n");
 
 #define DEBUG
 #ifdef DEBUG

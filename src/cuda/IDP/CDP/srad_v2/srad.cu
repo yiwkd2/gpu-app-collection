@@ -93,11 +93,17 @@ runTest( int argc, char** argv)
 
 	//Allocate managed memory
     cudaMallocManaged((void**)& C_cuda, sizeof(float)* size_I);
+    printf("alloc C_cuda, size: %lu\n", sizeof(float) * size_I);
 	cudaMallocManaged((void**)& E_C, sizeof(float)* size_I);
+    printf("alloc E_C, size: %lu\n", sizeof(float) * size_I);
 	cudaMallocManaged((void**)& W_C, sizeof(float)* size_I);
+    printf("alloc W_C, size: %lu\n", sizeof(float) * size_I);
 	cudaMallocManaged((void**)& S_C, sizeof(float)* size_I);
+    printf("alloc S_C, size: %lu\n", sizeof(float) * size_I);
 	cudaMallocManaged((void**)& N_C, sizeof(float)* size_I);
+    printf("alloc N_C, size: %lu\n", sizeof(float) * size_I);
     cudaMallocManaged((void**)& J_shared, sizeof(float)* size_I);
+    printf("alloc J_shared, size: %lu\n", sizeof(float) * size_I);
 	
 	printf("Randomizing the input matrix\n");
 	//Generate a random matrix
@@ -199,12 +205,18 @@ runTest( int argc, char** argv)
 	free(c);
 
     cudaFree(C_cuda);
+    printf("free C_cuda\n");
 	cudaFree(E_C);
+    printf("free E_C\n");
 	cudaFree(W_C);
+    printf("free W_C\n");
 	cudaFree(N_C);
+    printf("free N_C\n");
 	cudaFree(S_C);
+    printf("free S_C\n");
 
 	cudaFree(J_shared);
+    printf("free J_shared\n");
   
     MEM_TEST();
 }
