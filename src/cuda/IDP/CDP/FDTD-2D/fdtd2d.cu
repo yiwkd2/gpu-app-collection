@@ -250,12 +250,16 @@ int main(int argc, char *argv[])
     reserve_gpu_memory();
 
 	cudaMallocManaged(&_fict_, tmax*sizeof(DATA_TYPE));
+    memset(_fict_, 0, tmax*sizeof(DATA_TYPE));
     printf("alloc _fict_, size: %lu\n", tmax*sizeof(DATA_TYPE));
 	cudaMallocManaged(&ex, NX*(NY+1)*sizeof(DATA_TYPE));
+    memset(ex, 0, NX*(NY+1)*sizeof(DATA_TYPE));
     printf("alloc ex, size: %lu\n", NX*(NY+1)*sizeof(DATA_TYPE));
 	cudaMallocManaged(&ey, (NX+1)*NY*sizeof(DATA_TYPE));
+    memset(ey, 0, (NX+1)*NY*sizeof(DATA_TYPE));
     printf("alloc ey, size: %lu\n", (NX+1)*NY*sizeof(DATA_TYPE));
 	cudaMallocManaged(&hz, NX*NY*sizeof(DATA_TYPE));
+    memset(hz, 0, NX*NY*sizeof(DATA_TYPE));
     printf("alloc hz, size: %lu\n", NX*NY*sizeof(DATA_TYPE));
 	
 	//hz_outputFromGpu = (DATA_TYPE*)malloc(NX*NY*sizeof(DATA_TYPE));

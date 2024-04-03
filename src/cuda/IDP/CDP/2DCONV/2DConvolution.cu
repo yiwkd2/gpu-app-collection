@@ -97,20 +97,14 @@ int main(int argc, char *argv[])
     reserve_gpu_memory();
 
 	cudaMallocManaged( &A, NI*NJ*sizeof(DATA_TYPE) );
+    memset(A, 0, NI*NJ*sizeof(DATA_TYPE));
     printf("size of A: %lu\n", NI*NJ*sizeof(DATA_TYPE));
 	cudaMallocManaged( &B, NI*NJ*sizeof(DATA_TYPE) );
+    memset(B, 0, NI*NJ*sizeof(DATA_TYPE));
     printf("size of B: %lu\n", NI*NJ*sizeof(DATA_TYPE));
 
 	//initialize the arrays
 	init(A);
-
-	for (int i = 0; i < NI; ++i)
-    	{
-		for (int j = 0; j < NJ; ++j)
-		{
-			B[i*NJ + j] = 0;
-        	}
-    	}
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);

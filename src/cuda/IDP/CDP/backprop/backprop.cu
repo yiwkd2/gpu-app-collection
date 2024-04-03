@@ -58,6 +58,7 @@ float *alloc_1d_dbl(int n)
   float *new_arr;
 
   cudaMallocManaged(&new_arr, n * sizeof (float));
+  memset(new_arr, 0, n * sizeof(float));
   total_malloc += n * sizeof(float);
   if (new_arr == NULL) {
     printf("ALLOC_1D_DBL: Couldn't allocate array of %d floats\n", n);
@@ -574,8 +575,10 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   reserve_gpu_memory();
   
   cudaMallocManaged((void**) &output_hidden_cuda, (hid + 1) * sizeof(float));
+  memset(output_hidden_cuda, 0, (hid + 1) * sizeof(float));
   printf("alloc output_hidden_cuda, size: %lu\n", (hid + 1) * sizeof(float));
   cudaMallocManaged((void**) &hidden_partial_sum, num_blocks * WIDTH * sizeof(float));
+  memset(hidden_partial_sum, 0, num_blocks * WIDTH * sizeof(float));
   printf("alloc hidden_partial_sum, size: %lu\n", num_blocks * WIDTH * sizeof(float));
   
 #endif

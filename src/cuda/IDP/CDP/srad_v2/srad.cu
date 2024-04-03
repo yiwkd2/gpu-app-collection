@@ -93,16 +93,22 @@ runTest( int argc, char** argv)
 
 	//Allocate managed memory
     cudaMallocManaged((void**)& C_cuda, sizeof(float)* size_I);
+    memset(C_cuda, 0, sizeof(float)* size_I);
     printf("alloc C_cuda, size: %lu\n", sizeof(float) * size_I);
 	cudaMallocManaged((void**)& E_C, sizeof(float)* size_I);
+    memset(E_C, 0, sizeof(float)* size_I);
     printf("alloc E_C, size: %lu\n", sizeof(float) * size_I);
 	cudaMallocManaged((void**)& W_C, sizeof(float)* size_I);
+    memset(W_C, 0, sizeof(float)* size_I);
     printf("alloc W_C, size: %lu\n", sizeof(float) * size_I);
 	cudaMallocManaged((void**)& S_C, sizeof(float)* size_I);
+    memset(S_C, 0, sizeof(float)* size_I);
     printf("alloc S_C, size: %lu\n", sizeof(float) * size_I);
 	cudaMallocManaged((void**)& N_C, sizeof(float)* size_I);
+    memset(N_C, 0, sizeof(float)* size_I);
     printf("alloc N_C, size: %lu\n", sizeof(float) * size_I);
     cudaMallocManaged((void**)& J_shared, sizeof(float)* size_I);
+    memset(J_shared, 0, sizeof(float)* size_I);
     printf("alloc J_shared, size: %lu\n", sizeof(float) * size_I);
 	
 	printf("Randomizing the input matrix\n");

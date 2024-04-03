@@ -319,11 +319,14 @@ void run(int argc, char** argv)
 
     float *MatrixTemp[2], *MatrixPower;
     cudaMallocManaged((void**)&MatrixTemp[0], sizeof(float)*size);
+    memset(MatrixTemp[0], 0, sizeof(float)*size);
     printf("alloc MatrixTemp[0], size: %lu\n", sizeof(float)*size);
     cudaMallocManaged((void**)&MatrixTemp[1], sizeof(float)*size);
+    memset(MatrixTemp[1], 0, sizeof(float)*size);
     printf("alloc MatrixTemp[1], size: %lu\n", sizeof(float)*size);
 
     cudaMallocManaged((void**)&MatrixPower, sizeof(float)*size);
+    memset(MatrixPower, 0, sizeof(float)*size);
     printf("alloc MatrixPower, size: %lu\n", sizeof(float)*size);
     
     if( !MatrixPower || !MatrixTemp[0] || !MatrixTemp[1])

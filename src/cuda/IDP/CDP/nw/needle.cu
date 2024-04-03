@@ -106,8 +106,10 @@ void runTest( int argc, char** argv)
     reserve_gpu_memory();
 
 	cudaMallocManaged(&referrence, sizeof(int)*size);
+    memset(referrence, 0, sizeof(int)*size);
     printf("alloc referrence, size: %lu\n", sizeof(int)*size);
 	cudaMallocManaged(&itemsets, sizeof(int)*size);	
+    memset(itemsets, 0, sizeof(int)*size);
     printf("alloc itemsets, size: %lu\n", sizeof(int)*size);
 
 	if (!itemsets)

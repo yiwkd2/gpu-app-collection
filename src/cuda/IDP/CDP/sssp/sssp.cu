@@ -83,10 +83,13 @@ void generateRandomGraph(GraphData *graph, int numVertices, int neighborsPerVert
     total_malloc += sizeof(int) * graph->numEdges;
 
     gpuErrchk(cudaMallocManaged(&graph -> vertexArray,    sizeof(int)   * graph -> numVertices));
+    memset(graph->vertexArray, 0, sizeof(int) * graph->numVertices);
     printf("alloc vertexArray, size: %lu\n", sizeof(int) * graph->numVertices);
     gpuErrchk(cudaMallocManaged(&graph -> edgeArray,  sizeof(int)   * graph -> numEdges));
+    memset(graph->edgeArray, 0, sizeof(int) * graph->numEdges);
     printf("alloc edgeArray, size: %lu\n", sizeof(int) * graph->numEdges);
     gpuErrchk(cudaMallocManaged(&graph -> weightArray,    sizeof(float) * graph -> numEdges));
+    memset(graph->weightArray, 0, sizeof(float) * graph->numEdges);
     printf("alloc weightArray, size: %lu\n", sizeof(float) * graph->numEdges);
 
 
@@ -276,6 +279,7 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
     bool    *d_finalizedVertices;           gpuErrchk(cudaMalloc(&d_finalizedVertices,       sizeof(bool)   * graph->numVertices));
     //float   *d_shortestDistances;           gpuErrchk(cudaMallocManaged(&d_shortestDistances,       sizeof(float) * graph->numVertices));
     float   *d_updatingShortestDistances;   gpuErrchk(cudaMallocManaged(&d_updatingShortestDistances, sizeof(float) * graph->numVertices));
+    memset(d_updatingShortestDistances, 0, sizeof(float) * graph->numVertices);
     printf("alloc d_updatingShortestDistances, size: %lu\n", sizeof(float) * graph->numVertices);
 
     //bool *h_finalizedVertices = (bool *)malloc(sizeof(bool) * graph->numVertices);
@@ -428,6 +432,7 @@ int main(int argc, char* argv[]) {
     float *h_shortestDistancesGPU;// = (float*)malloc(sizeof(float) * graph.numVertices);
     total_malloc += sizeof(float) * graph.numVertices;
     gpuErrchk(cudaMallocManaged(&h_shortestDistancesGPU,       sizeof(float) * graph.numVertices));
+    memset(h_shortestDistancesGPU, 0, sizeof(float) * graph.numVertices);
     printf("alloc h_shortestDistancesGPU, size: %lu\n", sizeof(float) * graph.numVertices);
 
     dijkstraGPU(&graph, sourceVertex, h_shortestDistancesGPU);
