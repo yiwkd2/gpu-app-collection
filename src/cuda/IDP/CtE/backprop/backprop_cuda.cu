@@ -97,6 +97,8 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   cudaMalloc((void**) &input_hidden_cuda, (in + 1) * (hid + 1) * sizeof(float));
   cudaMalloc((void**) &hidden_partial_sum, num_blocks * WIDTH * sizeof(float));
   
+  cudaMalloc((void**) &hidden_delta_cuda, (hid + 1) * sizeof(float));
+  cudaMalloc((void**) &input_prev_weights_cuda, (in + 1) * (hid + 1) * sizeof(float));
   
 #endif
 
@@ -163,9 +165,6 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 
 
 #ifdef GPU
-
-  cudaMalloc((void**) &hidden_delta_cuda, (hid + 1) * sizeof(float));
-  cudaMalloc((void**) &input_prev_weights_cuda, (in + 1) * (hid + 1) * sizeof(float));
 
   cudaMemcpy(hidden_delta_cuda, net->hidden_delta, (hid + 1) * sizeof(float), cudaMemcpyHostToDevice);
   cudaMemcpy(input_prev_weights_cuda, input_weights_prev_one_dim, (in + 1) * (hid + 1) * sizeof(float), cudaMemcpyHostToDevice);
