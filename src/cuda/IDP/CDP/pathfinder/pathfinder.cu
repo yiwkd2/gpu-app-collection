@@ -258,12 +258,14 @@ void run(int argc, char** argv)
 
     cudaDeviceSynchronize();
 
+    /*
     // emulate host access
     int dummy;
     for (int i = 0; i < cols; i++) {
         HOST_ACCESS(READ, &gpuResult[final_ret][i]);
         dummy = gpuResult[final_ret][i];
     }
+    */
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);

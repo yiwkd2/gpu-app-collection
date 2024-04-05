@@ -261,12 +261,14 @@ void BFSGraph( int argc, char** argv)
 
     cudaDeviceSynchronize();
 
+    /*
     // emulate host access
     int dummy;
 	for(int i=0;i<no_of_nodes;i++) {
         HOST_ACCESS(READ, &cost[i]);
         dummy = cost[i];
     }
+    */
 
     cudaEventRecord(stop_);
     cudaEventSynchronize(stop_);

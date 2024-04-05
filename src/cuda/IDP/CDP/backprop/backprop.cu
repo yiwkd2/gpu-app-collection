@@ -707,6 +707,7 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 
   cudaDeviceSynchronize();
 
+  /*
   // emulate CPU access
   float dummy;
   for(int i = 0; i < in + 1; i ++) {
@@ -719,6 +720,7 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
       dummy = net->input_weights2[i*(hid+1)+j];
     }
   }
+  */
 
   cudaEventRecord(stop);
   cudaEventSynchronize(stop);

@@ -366,6 +366,7 @@ void run(int argc, char** argv)
     // Wait for GPU to finish before accessing on host
     cudaDeviceSynchronize();
     
+    /*
     // emulate host access
     float dummy;
 	for (int i=0; i < grid_rows; i++) 
@@ -374,6 +375,7 @@ void run(int argc, char** argv)
          HOST_ACCESS(READ, &MatrixTemp[ret][i*grid_cols+j]);
          dummy = MatrixTemp[ret][i*grid_cols+j];
 	 }
+     */
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);

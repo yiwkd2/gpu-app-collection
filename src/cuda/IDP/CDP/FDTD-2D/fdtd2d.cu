@@ -275,12 +275,14 @@ int main(int argc, char *argv[])
 	//GPU_argv_init();
 	fdtdCuda(_fict_, ex, ey, hz);//, hz_outputFromGpu);
 
+    /*
     // emulate host access
     double dummy;
 	for(int i = 0; i < NX*NY; i+= 1000) {
         HOST_ACCESS(READ, &hz[i]);
         dummy = hz[i];
 	}
+    */
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);

@@ -114,11 +114,13 @@ int main(int argc, char *argv[])
 
 	convolution2DCuda(A, B);
 
+    /*
     // emulate host access
 	for(int i = 0; i < NI*NJ; i+= 10000) {
         HOST_ACCESS(READ, &B[i]);
         float tmp = B[i];
 	}
+    */
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);

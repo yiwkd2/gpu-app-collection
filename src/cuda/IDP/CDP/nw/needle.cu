@@ -202,6 +202,7 @@ void runTest( int argc, char** argv)
 
     cudaDeviceSynchronize();
 
+    /*
     // emulate host access
     int dummy;
 	for (int i = max_rows - 2, j = max_rows - 2; i>=0, j>=0;){
@@ -261,6 +262,7 @@ void runTest( int argc, char** argv)
 		else
 		;
 	}
+    */
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);

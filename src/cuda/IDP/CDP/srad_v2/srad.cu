@@ -171,6 +171,7 @@ runTest( int argc, char** argv)
 #endif
 	}
 
+    /*
     // emulate host access
     float dummy;
     for( int i = 0 ; i < rows ; i++){
@@ -179,6 +180,7 @@ runTest( int argc, char** argv)
         dummy = J_shared[i * cols + j];
 	}	
     }
+    */
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);

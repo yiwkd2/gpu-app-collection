@@ -331,12 +331,14 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
 
     cudaDeviceSynchronize();
     
+    /*
     // emulate host access
     float dummy;
     for (int k = 0; k < graph->numVertices; k++) {
         HOST_ACCESS(READ, &h_shortestDistances[k]);
         dummy = h_shortestDistances[k];
     }
+    */
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
