@@ -249,22 +249,56 @@ int main(int argc, char *argv[])
     total_malloc += NX*NY*sizeof(DATA_TYPE);
     reserve_gpu_memory();
 
-    cudaHostAlloc(&_fict_, tmax*sizeof(DATA_TYPE), 0);
-	cudaHostAlloc(&ex, NX*(NY+1)*sizeof(DATA_TYPE), 0);
-	cudaHostAlloc(&ey, (NX+1)*NY*sizeof(DATA_TYPE), 0);
-	cudaHostAlloc(&hz, NX*NY*sizeof(DATA_TYPE), 0);
+	cudaMallocManaged(&_fict_, tmax*sizeof(DATA_TYPE));
+    memset(_fict_, 0, tmax*sizeof(DATA_TYPE));
+    printf("alloc _fict_, size: %lu\n", tmax*sizeof(DATA_TYPE));
+	cudaMallocManaged(&ex, NX*(NY+1)*sizeof(DATA_TYPE));
+    memset(ex, 0, NX*(NY+1)*sizeof(DATA_TYPE));
+    printf("alloc ex, size: %lu\n", NX*(NY+1)*sizeof(DATA_TYPE));
+	cudaMallocManaged(&ey, (NX+1)*NY*sizeof(DATA_TYPE));
+    memset(ey, 0, (NX+1)*NY*sizeof(DATA_TYPE));
+    printf("alloc ey, size: %lu\n", (NX+1)*NY*sizeof(DATA_TYPE));
+	cudaMallocManaged(&hz, NX*NY*sizeof(DATA_TYPE));
+    memset(hz, 0, NX*NY*sizeof(DATA_TYPE));
+    printf("alloc hz, size: %lu\n", NX*NY*sizeof(DATA_TYPE));
 	
 	//hz_outputFromGpu = (DATA_TYPE*)malloc(NX*NY*sizeof(DATA_TYPE));
 
 	init_arrays(_fict_, ex, ey, hz);
 
-    MAKE_MANAGED(_fict_);
-    MAKE_MANAGED(ex);
-    MAKE_MANAGED(ey);
-    MAKE_MANAGED(hz);
+    cudaMakeManagedByDevice(_fict_);
+    cudaMakeManagedByDevice(ex);
+    cudaMakeManagedByDevice(ey);
+    cudaMakeManagedByDevice(hz);
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
 
 	//GPU_argv_init();
 	fdtdCuda(_fict_, ex, ey, hz);//, hz_outputFromGpu);
+
+    /*
+    // emulate host access
+    double dummy;
+	for(int i = 0; i < NX*NY; i+= 1000) {
+        HOST_ACCESS(READ, &hz[i]);
+        dummy = hz[i];
+	}
+    */
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
 	//t_start = rtclock();
 	//runFdtd(_fict_, ex, ey, hz);
@@ -273,8 +307,6 @@ int main(int argc, char *argv[])
 	//fprintf(stdout, "CPU Runtime: %0.6lfs\n", t_end - t_start);
 	
 	//compareResults(hz, hz_outputFromGpu);
-
-    MAKE_UNMANAGED(hz);
 
 	printf("-------------Size: %lf--------------\n", 
 		(float)(sizeof(DATA_TYPE)*(tmax + NX*(NY+1)+(NX+1)*NY+NX*NY))/1024.0/1024.0);
@@ -289,13 +321,17 @@ int main(int argc, char *argv[])
 	fclose(fp);
 
 	cudaFree(_fict_);
+    printf("free _fict_\n");
 	cudaFree(ex);
+    printf("free ex\n");
 	cudaFree(ey);
-	cudaFreeHost(hz);
+    printf("free ey\n");
+	cudaFree(hz);
+    printf("free hz\n");
 	//free(hz_outputFromGpu);
 
-    MEM_TEST();
-
+    MEM_TEST();    
+ 
 	return 0;
 }
 

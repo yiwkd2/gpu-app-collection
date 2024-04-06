@@ -48,8 +48,8 @@ runTest( int argc, char** argv)
     	int rows, cols, size_I, size_R, niter = 10, iter;
     	float *I, lambda, q0sqr, sum, sum2, tmp, meanROI,varROI ;
 
-	float *J;
-    float *C;
+	float *J_shared;
+    	float *C_cuda;
 	float *E_C, *W_C, *N_C, *S_C;
 	
 	unsigned int r1, r2, c1, c2;
@@ -77,12 +77,11 @@ runTest( int argc, char** argv)
         usage(argc, argv);
     }
 
-
-
 	size_I = cols * rows;
     	size_R = (r2-r1+1)*(c2-c1+1);   
 
 	I = (float *)malloc( size_I * sizeof(float) );
+	c  = (float *)malloc(sizeof(float)* size_I) ;
 
     total_malloc += sizeof(float) * size_I;
     total_malloc += sizeof(float) * size_I;
@@ -92,21 +91,48 @@ runTest( int argc, char** argv)
     total_malloc += sizeof(float) * size_I;
     reserve_gpu_memory();
 
-    cudaHostAlloc((void**) &J, sizeof(float) * size_I, 0);
-    cudaHostAlloc((void**) &C, sizeof(float) * size_I, 0);
-    cudaHostAlloc((void**) &E_C, sizeof(float) * size_I, 0);
-    cudaHostAlloc((void**) &W_C, sizeof(float) * size_I, 0);
-    cudaHostAlloc((void**) &S_C, sizeof(float) * size_I, 0);
-    cudaHostAlloc((void**) &N_C, sizeof(float) * size_I, 0);
+	//Allocate managed memory
+    cudaMallocManaged((void**)& C_cuda, sizeof(float)* size_I);
+    memset(C_cuda, 0, sizeof(float)* size_I);
+    printf("alloc C_cuda, size: %lu\n", sizeof(float) * size_I);
+	cudaMallocManaged((void**)& E_C, sizeof(float)* size_I);
+    memset(E_C, 0, sizeof(float)* size_I);
+    printf("alloc E_C, size: %lu\n", sizeof(float) * size_I);
+	cudaMallocManaged((void**)& W_C, sizeof(float)* size_I);
+    memset(W_C, 0, sizeof(float)* size_I);
+    printf("alloc W_C, size: %lu\n", sizeof(float) * size_I);
+	cudaMallocManaged((void**)& S_C, sizeof(float)* size_I);
+    memset(S_C, 0, sizeof(float)* size_I);
+    printf("alloc S_C, size: %lu\n", sizeof(float) * size_I);
+	cudaMallocManaged((void**)& N_C, sizeof(float)* size_I);
+    memset(N_C, 0, sizeof(float)* size_I);
+    printf("alloc N_C, size: %lu\n", sizeof(float) * size_I);
+    cudaMallocManaged((void**)& J_shared, sizeof(float)* size_I);
+    memset(J_shared, 0, sizeof(float)* size_I);
+    printf("alloc J_shared, size: %lu\n", sizeof(float) * size_I);
 	
 	printf("Randomizing the input matrix\n");
 	//Generate a random matrix
 	random_matrix(I, rows, cols);
 
     for (int k = 0;  k < size_I; k++ ) {
-        J[k] = (float)exp(I[k]) ;
+        J_shared[k] = (float)exp(I[k]) ;
     }
-	printf("Start the SRAD main loop\n");
+
+    cudaMakeManagedByDevice(C_cuda);
+    cudaMakeManagedByDevice(E_C);
+    cudaMakeManagedByDevice(W_C);
+    cudaMakeManagedByDevice(S_C);
+    cudaMakeManagedByDevice(N_C);
+    cudaMakeManagedByDevice(J_shared);
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
+	//printf("Start the SRAD main loop\n");
 
 #ifdef PREF
 	cudaStream_t stream1;
@@ -115,19 +141,12 @@ runTest( int argc, char** argv)
 	cudaStream_t stream2;
 	cudaStreamCreate(&stream2);
 #endif
-
-    MAKE_MANAGED(C);
-    MAKE_MANAGED(E_C);
-    MAKE_MANAGED(W_C);
-    MAKE_MANAGED(S_C);
-    MAKE_MANAGED(N_C);
-    MAKE_MANAGED(J);
-
 	for (iter=0; iter< niter; iter++) {     
 		sum=0; sum2=0;
         	for (int i=r1; i<=r2; i++) {
             		for (int j=c1; j<=c2; j++) {
-                		tmp   = J[i * cols + j];
+                        HOST_ACCESS(READ, &J_shared[i * cols + j]);
+                		tmp   = J_shared[i * cols + j];
                 		sum  += tmp ;
                 		sum2 += tmp*tmp;
             		}
@@ -139,7 +158,7 @@ runTest( int argc, char** argv)
 #ifdef PREF
 		int device = -1;
 		cudaGetDevice(&device);
-		cudaMemPrefetchAsync(J, sizeof(float)* size_I, device, stream1);
+		cudaMemPrefetchAsync(J_shared, sizeof(float)* size_I, device, stream1);
 #endif
 		//Currently the input size must be divided by 16 - the block size
 		int block_x = cols/BLOCK_SIZE ;
@@ -150,18 +169,36 @@ runTest( int argc, char** argv)
 
 		//Run kernels
 #ifdef PREF
-		srad_cuda_1<<<dimGrid, dimBlock, 0, stream2>>>(E_C, W_C, N_C, S_C, J, C, cols, rows, q0sqr); 
-		srad_cuda_2<<<dimGrid, dimBlock, 0, stream2>>>(E_C, W_C, N_C, S_C, J, C, cols, rows, lambda, q0sqr); 
+		srad_cuda_1<<<dimGrid, dimBlock, 0, stream2>>>(E_C, W_C, N_C, S_C, J_shared, C_cuda, cols, rows, q0sqr); 
+		srad_cuda_2<<<dimGrid, dimBlock, 0, stream2>>>(E_C, W_C, N_C, S_C, J_shared, C_cuda, cols, rows, lambda, q0sqr); 
 #else
-		srad_cuda_1<<<dimGrid, dimBlock>>>(E_C, W_C, N_C, S_C, J, C, cols, rows, q0sqr); 
-        cudaDeviceSynchronize();
-		srad_cuda_2<<<dimGrid, dimBlock>>>(E_C, W_C, N_C, S_C, J, C, cols, rows, lambda, q0sqr); 
+		srad_cuda_1<<<dimGrid, dimBlock>>>(E_C, W_C, N_C, S_C, J_shared, C_cuda, cols, rows, q0sqr); 
+		srad_cuda_2<<<dimGrid, dimBlock>>>(E_C, W_C, N_C, S_C, J_shared, C_cuda, cols, rows, lambda, q0sqr); 
 		cudaDeviceSynchronize();
 #endif
-
 	}
 
-    MAKE_UNMANAGED(J);
+    /*
+    // emulate host access
+    float dummy;
+    for( int i = 0 ; i < rows ; i++){
+	for ( int j = 0 ; j < cols ; j++){
+        HOST_ACCESS(READ, &J_shared[i * cols + j]);
+        dummy = J_shared[i * cols + j];
+	}	
+    }
+    */
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
 #define OUTPUT
 
@@ -170,7 +207,8 @@ runTest( int argc, char** argv)
     printf("Printing Output:\n"); 
     for( int i = 0 ; i < rows ; i++){
 	for ( int j = 0 ; j < cols ; j++){
-        	printf("%.5f ", J[i * cols + j]); 
+        HOST_ACCESS(READ, &J_shared[i * cols + j]);
+        printf("%.5f ", J_shared[i * cols + j]); 
 	}	
    	printf("\n"); 
     }
@@ -179,15 +217,22 @@ runTest( int argc, char** argv)
 	printf("Computation Done\n");
 
 	free(I);
+	free(c);
 
-    cudaFree(C);
+    cudaFree(C_cuda);
+    printf("free C_cuda\n");
 	cudaFree(E_C);
+    printf("free E_C\n");
 	cudaFree(W_C);
+    printf("free W_C\n");
 	cudaFree(N_C);
+    printf("free N_C\n");
 	cudaFree(S_C);
+    printf("free S_C\n");
 
-	cudaFreeHost(J);
-    
+	cudaFree(J_shared);
+    printf("free J_shared\n");
+  
     MEM_TEST();
 }
 

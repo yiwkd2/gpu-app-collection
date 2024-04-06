@@ -66,7 +66,7 @@ main( int argc, char** argv)
 
 void usage(int argc, char **argv)
 {
-	fprintf(stderr, "Usage: %s <max_rows/max_cols> <penalty> <dev_mem_ratio (%%)>\n", argv[0]);
+	fprintf(stderr, "Usage: %s <max_rows/max_cols> <penalty> <memory_ratio>\n", argv[0]);
 	fprintf(stderr, "\t<dimension>  - x and y dimensions\n");
 	fprintf(stderr, "\t<penalty> - penalty(positive integer)\n");
 	exit(1);
@@ -105,17 +105,12 @@ void runTest( int argc, char** argv)
     total_malloc += size * sizeof(int);
     reserve_gpu_memory();
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-
-	//cudaMallocManaged(&referrence, sizeof(int)*size);
-	//cudaMallocManaged(&itemsets, sizeof(int)*size);
-    cudaHostAlloc(&referrence, sizeof(int)*size, 0);
-    cudaHostAlloc(&itemsets, sizeof(int)*size, 0);
-	
+	cudaMallocManaged(&referrence, sizeof(int)*size);
+    memset(referrence, 0, sizeof(int)*size);
+    printf("alloc referrence, size: %lu\n", sizeof(int)*size);
+	cudaMallocManaged(&itemsets, sizeof(int)*size);	
+    memset(itemsets, 0, sizeof(int)*size);
+    printf("alloc itemsets, size: %lu\n", sizeof(int)*size);
 
 	if (!itemsets)
 		fprintf(stderr, "error: can not allocate memory");
@@ -167,15 +162,21 @@ void runTest( int argc, char** argv)
 	cudaMemPrefetchAsync( itemsets, sizeof(int)*size, device, stream2);
 #endif
 
-    dim3 dimGrid;
+        dim3 dimGrid;
 	dim3 dimBlock(BLOCK_SIZE, 1);
 	int block_width = ( max_cols - 1 )/BLOCK_SIZE;
 
-	printf("Processing top-left matrix\n");
-    fflush(stdout);
+    cudaMakeManagedByDevice(referrence);
+    cudaMakeManagedByDevice(itemsets);
 
-    MAKE_MANAGED(referrence);
-    MAKE_MANAGED(itemsets);
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
+	//printf("Processing top-left matrix\n");
+    //fflush(stdout);
 	
 	//process top-left matrix
 	for( int i = 1 ; i <= block_width ; i++){
@@ -185,12 +186,11 @@ void runTest( int argc, char** argv)
 		needle_cuda_shared_1<<<dimGrid, dimBlock, 0, stream3>>>(referrence, itemsets, max_cols, penalty, i, block_width); 
 #else
 		needle_cuda_shared_1<<<dimGrid, dimBlock>>>(referrence, itemsets, max_cols, penalty, i, block_width); 
-        cudaDeviceSynchronize();
 #endif
 	}
 	
-	printf("Processing bottom-right matrix\n");
-    fflush(stdout);
+	//printf("Processing bottom-right matrix\n");
+    //fflush(stdout);
 
     	//process bottom-right matrix
 	for( int i = block_width - 1  ; i >= 1 ; i--){
@@ -200,9 +200,83 @@ void runTest( int argc, char** argv)
 		needle_cuda_shared_2<<<dimGrid, dimBlock, 0, stream3>>>(referrence, itemsets, max_cols, penalty, i, block_width); 
 #else
 		needle_cuda_shared_2<<<dimGrid, dimBlock>>>(referrence, itemsets, max_cols, penalty, i, block_width);
-        cudaDeviceSynchronize();
 #endif
 	}
+
+    cudaDeviceSynchronize();
+
+    /*
+    // emulate host access
+    int dummy;
+	for (int i = max_rows - 2, j = max_rows - 2; i>=0, j>=0;){
+		int nw, n, w, traceback;
+		if ( i == max_rows - 2 && j == max_rows - 2 ) {
+            HOST_ACCESS(READ, &itemsets[ i * max_cols + j]);
+            dummy = itemsets[i * max_cols + j];
+        }
+
+		if ( i == 0 && j == 0 )
+           		break;
+		if ( i > 0 && j > 0 ){
+            HOST_ACCESS(READ, &itemsets[ (i - 1) * max_cols + j - 1 ]);
+			nw = itemsets[(i - 1) * max_cols + j - 1];
+            HOST_ACCESS(READ, &itemsets[ i * max_cols + j - 1 ]);
+		    w  = itemsets[ i * max_cols + j - 1 ];
+            HOST_ACCESS(READ, &itemsets[ (i - 1) * max_cols + j ]);
+            n  = itemsets[(i - 1) * max_cols + j];
+		}
+		else if ( i == 0 ){
+		    	nw = n = LIMIT;
+                HOST_ACCESS(READ, &itemsets[ i * max_cols + j - 1 ]);
+		    	w  = itemsets[ i * max_cols + j - 1 ];
+		}
+		else if ( j == 0 ){
+		    	nw = w = LIMIT;
+                HOST_ACCESS(READ, &itemsets[ (i - 1) * max_cols + j ]);
+            	n  = itemsets[(i - 1) * max_cols + j];
+		}
+		else{
+		}
+
+		//traceback = maximum(nw, w, n);
+		int new_nw, new_w, new_n;
+        HOST_ACCESS(READ, &referrence[ i * max_cols + j ]);
+		new_nw = nw + referrence[i * max_cols + j];
+		new_w = w - penalty;
+		new_n = n - penalty;
+		
+		traceback = maximum(new_nw, new_w, new_n);
+		if(traceback == new_nw)
+			traceback = nw;
+		if(traceback == new_w)
+			traceback = w;
+		if(traceback == new_n)
+            		traceback = n;
+
+		if(traceback == nw )
+			{i--; j--; continue;}
+
+        	else if(traceback == w )
+			{j--; continue;}
+
+        	else if(traceback == n )
+			{i--; continue;}
+
+		else
+		;
+	}
+    */
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
     /*
     printf("kernel execution is completed. dump memory, (referrence) addr: %p, size: %lx, "
@@ -211,9 +285,6 @@ void runTest( int argc, char** argv)
     fflush(stdout);
     while(1) {}
     */
-
-    MAKE_UNMANAGED(referrence);
-    MAKE_UNMANAGED(itemsets);
 	
 #define TRACEBACK
 #ifdef TRACEBACK
@@ -276,19 +347,10 @@ void runTest( int argc, char** argv)
 
 #endif
 
-	cudaFreeHost(referrence);
-	cudaFreeHost(itemsets);
-
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-    printf("Elapsed Time: %fms\n", milliseconds);
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+	cudaFree(referrence);
+    printf("free referrence\n");
+	cudaFree(itemsets);
+    printf("free itemsets\n");
 
     MEM_TEST();
 }

@@ -72,6 +72,10 @@ void convolution2DCuda(DATA_TYPE* A, DATA_TYPE* B)
 	dim3 grid((size_t)ceil( ((float)NI) / ((float)block.x) ), (size_t)ceil( ((float)NJ) / ((float)block.y)) );
 	
 	Convolution2D_kernel<<<grid, block>>>(NI, NJ, A, B);
+
+	// Wait for GPU to finish before accessing on host
+	// mock synchronization of memory specific to stream
+	cudaDeviceSynchronize();
 }
 
 
@@ -81,13 +85,29 @@ int main(int argc, char *argv[])
         fprintf(stderr, "usage: 2dconv <problem_size> <memory_ratio>");
         exit(0);
     }
-
     NI = atoi(argv[1]);
-    NJ = NI; 
+    NJ = NI;
     memory_ratio = atoi(argv[2]);
 
 	DATA_TYPE* A;
 	DATA_TYPE* B;  
+
+    total_malloc += NI*NJ*sizeof(DATA_TYPE);
+    total_malloc += NI*NJ*sizeof(DATA_TYPE);
+    reserve_gpu_memory();
+
+	cudaMallocManaged( &A, NI*NJ*sizeof(DATA_TYPE) );
+    memset(A, 0, NI*NJ*sizeof(DATA_TYPE));
+    printf("size of A: %lu\n", NI*NJ*sizeof(DATA_TYPE));
+	cudaMallocManaged( &B, NI*NJ*sizeof(DATA_TYPE) );
+    memset(B, 0, NI*NJ*sizeof(DATA_TYPE));
+    printf("size of B: %lu\n", NI*NJ*sizeof(DATA_TYPE));
+
+	//initialize the arrays
+	init(A);
+
+    cudaMakeManagedByDevice(A);
+    cudaMakeManagedByDevice(B);
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
@@ -95,33 +115,15 @@ int main(int argc, char *argv[])
 
     cudaEventRecord(start);
 
-    total_malloc += NI*NJ*sizeof(DATA_TYPE);
-    total_malloc += NI*NJ*sizeof(DATA_TYPE);
-    reserve_gpu_memory();
-
-    cudaHostAlloc(&A, NI*NJ*sizeof(DATA_TYPE), 0);
-    cudaHostAlloc(&B, NI*NJ*sizeof(DATA_TYPE), 0);
-
-	//initialize the arrays
-	init(A);
-
-    MAKE_MANAGED(A);
-    MAKE_MANAGED(B);
-
 	convolution2DCuda(A, B);
 
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
-
-    MAKE_UNMANAGED(B);
-	
-	FILE *fp;
-
-	fp = fopen("result_2DConv.txt","a+");
-
+    /*
+    // emulate host access
 	for(int i = 0; i < NI*NJ; i+= 10000) {
-		fprintf(fp, "%lf\n", B[i]);
+        HOST_ACCESS(READ, &B[i]);
+        float tmp = B[i];
 	}
+    */
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
@@ -130,14 +132,27 @@ int main(int argc, char *argv[])
     cudaEventElapsedTime(&milliseconds, start, stop);
 
     printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+	
+	FILE *fp;
+
+	fp = fopen("result_2DConv.txt","a+");
+
+	for(int i = 0; i < NI*NJ; i+= 10000) {
+		fprintf(fp, "%lf\n", B[i]);
+	}
 	
 	fclose(fp);
 
 	cudaFree(A);
-	cudaFreeHost(B);
+    printf("free A\n");
+	cudaFree(B);
+    printf("free B\n");
 
     MEM_TEST();
 	
-    exit(0);
+	return 0;
 }
 

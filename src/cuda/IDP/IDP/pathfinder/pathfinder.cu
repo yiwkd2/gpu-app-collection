@@ -32,7 +32,7 @@ init(int argc, char** argv)
         pyramid_height=atoi(argv[3]);
         memory_ratio = atoi(argv[4]);
 	}else{
-        printf("Usage: dynproc row_len col_len pyramid_height memory_ratio\n");
+        printf("Usage: dynproc row_len col_len pyramid_height\n");
         exit(0);
     }
 	data = new int[rows*cols];
@@ -42,9 +42,15 @@ init(int argc, char** argv)
     total_malloc += sizeof(int)*(rows*cols - cols);
     reserve_gpu_memory();
 
-    cudaHostAlloc((void**)&gpuResult[0], sizeof(int)*cols, 0);
-    cudaHostAlloc((void**)&gpuResult[1], sizeof(int)*cols, 0);
-    cudaHostAlloc((void**)&gpuWall, sizeof(int)*(rows*cols - cols), 0);
+    cudaMallocManaged((void**)&gpuResult[0], sizeof(int)*cols);
+    memset(gpuResult[0], 0, sizeof(int)*cols);
+    printf("alloc gpuResult[0], size: %lu\n", sizeof(int)*cols);
+    cudaMallocManaged((void**)&gpuResult[1], sizeof(int)*cols);
+    memset(gpuResult[1], 0, sizeof(int)*cols);
+    printf("alloc gpuResult[1], size: %lu\n", sizeof(int)*cols);
+    cudaMallocManaged((void**)&gpuWall, sizeof(int)*(rows*cols - cols));
+    memset(gpuWall, 0, sizeof(int)*(rows*cols - cols));
+    printf("alloc gpuWall, size: %lu\n", sizeof(int)*(rows*cols - cols));
 	
 	int seed = M_SEED;
 	srand(seed);
@@ -200,7 +206,6 @@ int calc_path(int *gpuWall, int *gpuResult[2], int rows, int cols, \
                 MIN(pyramid_height, rows-t-1), 
                 gpuWall, gpuResult[src], gpuResult[dst],
                 cols,rows, t, borderCols);
-        cudaDeviceSynchronize();
 #endif
 	}
         return dst;
@@ -242,30 +247,60 @@ void run(int argc, char** argv)
     cudaMemPrefetchAsync( gpuWall, sizeof(int)*(size-cols), DEVICE, stream2);
 #endif
 
-    MAKE_MANAGED(gpuResult[0]);
-    MAKE_MANAGED(gpuResult[1]);
-    MAKE_MANAGED(gpuWall);
+    cudaMakeManagedByDevice(gpuResult[0]);
+    cudaMakeManagedByDevice(gpuResult[1]);
+    cudaMakeManagedByDevice(gpuWall);
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
 
     int final_ret = calc_path(gpuWall, gpuResult, rows, cols, \
 	 pyramid_height, blockCols, borderCols);
 
     cudaDeviceSynchronize();
 
-    MAKE_UNMANAGED(gpuResult[final_ret]);
+    /*
+    // emulate host access
+    int dummy;
+    for (int i = 0; i < cols; i++) {
+        HOST_ACCESS(READ, &gpuResult[final_ret][i]);
+        dummy = gpuResult[final_ret][i];
+    }
+    */
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+
 
 #ifdef BENCH_PRINT
-    for (int i = 0; i < cols; i++)
-            printf("%d ",data[i]) ;
+    for (int i = 0; i < cols; i++) {
+        printf("%d ",data[i]) ;
+    }
     printf("\n") ;
-    for (int i = 0; i < cols; i++)
-            printf("%d ",gpuResult[final_ret][i]) ;
+    for (int i = 0; i < cols; i++) {
+        printf("%d ",gpuResult[final_ret][i]) ;
+    }
     printf("\n") ;
 #endif
 
 
     cudaFree(gpuWall);
-    cudaFreeHost(gpuResult[final_ret]);
-    cudaFree(gpuResult[(final_ret) ? 0 : 1]);
+    printf("free gpuWall\n");
+    cudaFree(gpuResult[0]);
+    printf("free gpuResult[0]\n");
+    cudaFree(gpuResult[1]);
+    printf("free gpuResult[1]\n");
 
     delete [] data;
 

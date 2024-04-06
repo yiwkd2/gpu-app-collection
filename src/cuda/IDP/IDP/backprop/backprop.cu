@@ -25,8 +25,8 @@
 
 #define fastcopy(to,from,len)\
 {\
-  register char *_to,*_from;\
-  register int _i,_l;\
+  char *_to,*_from;\
+  int _i,_l;\
   _to = (char *)(to);\
   _from = (char *)(from);\
   _l = (len);\
@@ -51,15 +51,14 @@ unsigned int num_threads = 0;
 unsigned int num_blocks = 0;
 
 
-
-
 /*** Allocate 1d array of floats ***/
 
 float *alloc_1d_dbl(int n)
 {
   float *new_arr;
 
-  cudaHostAlloc(&new_arr, n * sizeof (float), 0);
+  cudaMallocManaged(&new_arr, n * sizeof (float));
+  memset(new_arr, 0, n * sizeof(float));
   total_malloc += n * sizeof(float);
   if (new_arr == NULL) {
     printf("ALLOC_1D_DBL: Couldn't allocate array of %d floats\n", n);
@@ -126,19 +125,30 @@ BPNN *bpnn_internal_create(int n_in,int n_hidden,int n_out)
   newnet->hidden_n = n_hidden;
   newnet->output_n = n_out;
   newnet->input_units = alloc_1d_dbl(n_in + 1);
+  printf("alloc input_units, size: %lu\n", (n_in + 1) * sizeof(float));
   newnet->hidden_units = alloc_1d_dbl(n_hidden + 1);
+  printf("alloc hidden_units, size: %lu\n", (n_hidden + 1) * sizeof(float));
   newnet->output_units = alloc_1d_dbl(n_out + 1);
+  printf("alloc output_units, size: %lu\n", (n_out + 1) * sizeof(float));
 
   newnet->hidden_delta = alloc_1d_dbl(n_hidden + 1);
+  printf("alloc hidden_delta, size: %lu\n", (n_hidden + 1) * sizeof(float));
   newnet->output_delta = alloc_1d_dbl(n_out + 1);
+  printf("alloc output_delta, size: %lu\n", (n_out + 1) * sizeof(float));
   newnet->target = alloc_1d_dbl(n_out + 1);
+  printf("alloc target, size: %lu\n", (n_out + 1) * sizeof(float));
 
   newnet->input_weights = alloc_1d_dbl( (n_in + 1) * (n_hidden + 1) );
+  printf("alloc input_weights, size: %lu\n", (n_in + 1) * (n_hidden + 1) * sizeof(float));
   newnet->input_weights2 = alloc_1d_dbl( (n_in + 1) * (n_hidden + 1) );
+  printf("alloc input_weights2, size: %lu\n", (n_in + 1) * (n_hidden + 1) * sizeof(float));
   newnet->hidden_weights = alloc_1d_dbl( (n_hidden + 1) * (n_out + 1) );
+  printf("alloc hidden_weights, size: %lu\n", (n_hidden + 1) * (n_out + 1) * sizeof(float));
 
   newnet->input_prev_weights = alloc_1d_dbl( (n_in + 1) * (n_hidden + 1) );
+  printf("alloc input_prev_weights, size: %lu\n", (n_in + 1) * (n_hidden + 1) * sizeof(float));
   newnet->hidden_prev_weights = alloc_1d_dbl( (n_hidden + 1) * (n_out + 1) );
+  printf("alloc hidden_prev_weights, size: %lu\n", (n_hidden + 1) * (n_out + 1) * sizeof(float));
 
   return (newnet);
 }
@@ -146,21 +156,31 @@ BPNN *bpnn_internal_create(int n_in,int n_hidden,int n_out)
 
 void bpnn_free(BPNN *net)
 {
-  // managed - net->hidden_delta, net->input_prev_weigths
-  cudaFreeHost(net->input_units);
-  cudaFreeHost(net->hidden_units);
-  cudaFreeHost(net->output_units);
+  cudaFree(net->input_units);
+  printf("free input_units\n");
+  cudaFree(net->hidden_units);
+  printf("free hidden_units\n");
+  cudaFree(net->output_units);
+  printf("free output_units\n");
 
   cudaFree(net->hidden_delta);
-  cudaFreeHost(net->output_delta);
-  cudaFreeHost(net->target);
+  printf("free hidden_delta\n");
+  cudaFree(net->output_delta);
+  printf("free output_delta\n");
+  cudaFree(net->target);
+  printf("free target\n");
 
-  cudaFreeHost(net->input_weights);
-  cudaFreeHost(net->input_weights2);
-  cudaFreeHost(net->hidden_weights);
+  cudaFree(net->input_weights);
+  printf("free input_weights\n");
+  cudaFree(net->input_weights2);
+  printf("free input_weights2\n");
+  cudaFree(net->hidden_weights);
+  printf("free hidden_weights\n");
 
   cudaFree(net->input_prev_weights);
-  cudaFreeHost(net->hidden_prev_weights);
+  printf("free input_prev_weights\n");
+  cudaFree(net->hidden_prev_weights);
+  printf("free hidden_prev_weights\n");
 
   free((char *) net);
 }
@@ -203,6 +223,7 @@ void bpnn_layerforward(float* l1,float* l2,float* conn,int n1,int n2)
   int j, k;
 
   /*** Set up thresholding unit ***/
+  HOST_ACCESS(WRITE, &l1[0]);
   l1[0] = 1.0;
 #ifdef OPEN
   omp_set_num_threads(NUM_THREAD);
@@ -214,8 +235,11 @@ void bpnn_layerforward(float* l1,float* l2,float* conn,int n1,int n2)
     /*** Compute weighted sum of its inputs ***/
     sum = 0.0;
     for (k = 0; k <= n1; k++) {
+      HOST_ACCESS(READ, &conn[k*(n2+1)+j]);
+      HOST_ACCESS(READ, &l1[k]);
       sum += conn[k*(n2+1)+j] * l1[k];
     }
+    HOST_ACCESS(WRITE, &l2[j]);
     l2[j] = squash(sum);
   }
 }
@@ -226,9 +250,13 @@ void bpnn_output_error(float* delta,float* target,float* output,int nj,float* er
   float o, t, errsum;
   errsum = 0.0;
   for (j = 1; j <= nj; j++) {
+    HOST_ACCESS(READ, &output[j]);
     o = output[j];
+    HOST_ACCESS(READ, &target[j]);
     t = target[j];
+    HOST_ACCESS(WRITE, &delta[j]);
     delta[j] = o * (1.0 - o) * (t - o);
+    HOST_ACCESS(WRITE, &delta[j]);
     errsum += ABS(delta[j]);
   }
   *err = errsum;
@@ -248,12 +276,17 @@ void bpnn_hidden_error(float* delta_h,
 
   errsum = 0.0;
   for (j = 1; j <= nh; j++) {
+    HOST_ACCESS(READ, &hidden[j]);
     h = hidden[j];
     sum = 0.0;
     for (k = 1; k <= no; k++) {
+      HOST_ACCESS(READ, &delta_o[k]);
+      HOST_ACCESS(READ, &who[j*(no+1)+k]);
       sum += delta_o[k] * who[j*(no+1)+k];
     }
+    HOST_ACCESS(WRITE, &delta_h[j]);
     delta_h[j] = h * (1.0 - h) * sum;
+    HOST_ACCESS(READ, &delta_h[j]);
     errsum += ABS(delta_h[j]);
   }
   *err = errsum;
@@ -264,6 +297,7 @@ void bpnn_adjust_weights(float *delta,int ndelta,float* ly,int nly,float* w,floa
 {
   float new_dw;
   int k, j;
+  HOST_ACCESS(READ, &ly[0]);
   ly[0] = 1.0;
   //eta = 0.3;
   //momentum = 0.3;
@@ -276,8 +310,13 @@ void bpnn_adjust_weights(float *delta,int ndelta,float* ly,int nly,float* w,floa
 #endif
   for (j = 1; j <= ndelta; j++) {
     for (k = 0; k <= nly; k++) {
+      HOST_ACCESS(READ, &delta[j]);
+      HOST_ACCESS(READ, &ly[k]);
+      HOST_ACCESS(READ, &oldw[k*(ndelta+1)+j]);
       new_dw = ((ETA * delta[j] * ly[k]) + (MOMENTUM * oldw[k*(ndelta+1)+j]));
+      HOST_ACCESS(READ, &w[k*(ndelta+1)+j]);
           w[k*(ndelta+1)+j] += new_dw;
+      HOST_ACCESS(READ, &oldw[k*(ndelta+1)+j]);
           oldw[k*(ndelta+1)+j] = new_dw;
     }
   }
@@ -452,15 +491,14 @@ BPNN *bpnn_read(char* filename)
 void load(BPNN *net)
 {
   float *units;
-  int nr, nc, imgsize, i, j, k;
+  int nr, k;
 
   nr = layer_size;
   
-  imgsize = nr * nc;
   units = net->input_units;
 
   k = 1;
-  for (i = 0; i < nr; i++) {
+  for (int i = 0; i < nr; i++) {
 	  units[k] = (float) rand()/RAND_MAX ;
 	  k++;
     }
@@ -488,7 +526,6 @@ int setup(int argc, char *argv[])
   srand(seed);
 
   BPNN *net;
-  int i;
   float out_err, hid_err;
   net = bpnn_create(layer_size, 16, 1); // (16, 1 can not be changed)
   
@@ -511,6 +548,7 @@ int setup(int argc, char *argv[])
 int
 main( int argc, char** argv) 
 {
+    cudaMemGetInfo(&free_memory, &total_memory);
 	setup(argc, argv);
 }
 
@@ -524,27 +562,52 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   hid = net->hidden_n;
   out = net->output_n;   
    
-#ifdef GPU  
+#ifdef GPU
   float *output_hidden_cuda;
   float *hidden_partial_sum;
   float sum;
-  num_blocks = in / 16;  
+  num_blocks = in / 16;
   dim3  grid( 1 , num_blocks);
   dim3  threads(16 , 16);
 
   total_malloc += (hid + 1) * sizeof(float);
   total_malloc += num_blocks * WIDTH * sizeof(float);
   reserve_gpu_memory();
-
-  cudaEvent_t start, stop;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-
-  cudaEventRecord(start);  
- 
-  cudaHostAlloc((void**) &output_hidden_cuda, (hid + 1) * sizeof(float), 0);
-  cudaHostAlloc((void**) &hidden_partial_sum, num_blocks * WIDTH * sizeof(float), 0);
   
+  cudaMallocManaged((void**) &output_hidden_cuda, (hid + 1) * sizeof(float));
+  memset(output_hidden_cuda, 0, (hid + 1) * sizeof(float));
+  printf("alloc output_hidden_cuda, size: %lu\n", (hid + 1) * sizeof(float));
+  cudaMallocManaged((void**) &hidden_partial_sum, num_blocks * WIDTH * sizeof(float));
+  memset(hidden_partial_sum, 0, num_blocks * WIDTH * sizeof(float));
+  printf("alloc hidden_partial_sum, size: %lu\n", num_blocks * WIDTH * sizeof(float));
+  
+#endif
+
+#ifdef PREF
+  // Prefetch the data to the GPU
+  int device = -1;
+  cudaGetDevice(&device);
+
+  cudaStream_t stream1;
+  cudaStreamCreate(&stream1);
+
+  cudaStream_t stream2;
+  cudaStreamCreate(&stream2);
+
+  cudaStream_t stream3;
+  cudaStreamCreate(&stream3);
+
+  cudaStream_t stream4;
+  cudaStreamCreate(&stream4);
+
+  cudaStream_t stream5;
+  cudaStreamCreate(&stream5);
+
+  cudaStream_t stream6;
+  cudaStreamCreate(&stream6);
+
+  cudaMemPrefetchAsync(net->input_units, (in + 1) * sizeof(float), device, stream1);
+  cudaMemPrefetchAsync(net->input_weights,(in + 1) * (hid + 1) * sizeof(float), device, stream2);
 #endif
 
 #ifdef CPU
@@ -556,45 +619,64 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 
 #ifdef GPU
  
-  printf("Performing GPU computation\n");
+  //printf("Performing GPU computation\n");
+  cudaMakeManagedByDevice(output_hidden_cuda);
+  cudaMakeManagedByDevice(hidden_partial_sum);
+  cudaMakeManagedByDevice(net->input_units);
+  cudaMakeManagedByDevice(net->hidden_units);
+  cudaMakeManagedByDevice(net->output_units);
+  cudaMakeManagedByDevice(net->hidden_delta);
+  cudaMakeManagedByDevice(net->output_delta);
+  cudaMakeManagedByDevice(net->target);
+  cudaMakeManagedByDevice(net->input_weights);
+  cudaMakeManagedByDevice(net->input_weights2);
+  cudaMakeManagedByDevice(net->hidden_weights);
+  cudaMakeManagedByDevice(net->input_prev_weights);
+  cudaMakeManagedByDevice(net->hidden_prev_weights);
   
-  //printf("in= %d, hid = %d, numblocks = %d\n", in, hid, num_blocks);
-  
-  MAKE_MANAGED(net->input_units);
-  MAKE_MANAGED(output_hidden_cuda);
-  MAKE_MANAGED(net->input_weights);
-  MAKE_MANAGED(hidden_partial_sum);
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
 
+  cudaEventRecord(start);
+  
+
+#ifdef PREF
+  bpnn_layerforward_CUDA<<< grid, threads, 0, stream2 >>>(net->input_units,
+					      output_hidden_cuda,
+					      net->input_weights,
+					      hidden_partial_sum,
+					      in,
+					      hid);
+#else  
   bpnn_layerforward_CUDA<<< grid, threads >>>(net->input_units,
 					      output_hidden_cuda,
 					      net->input_weights,
 					      hidden_partial_sum,
 					      in,
 					      hid);
+#endif
+  
   cudaDeviceSynchronize();
-
   cudaError_t error = cudaGetLastError();
 	if (error != cudaSuccess) {
 		printf("bpnn kernel error: %s\n", cudaGetErrorString(error));
 		exit(EXIT_FAILURE);
 	}
-
-  // managed - net->input_units, output_hidden_cuda, net->input_weights, hidden_partial_sum
   
-  MAKE_UNMANAGED(hidden_partial_sum);
-  MAKE_UNMANAGED(net->input_weights);
-
-  // managed - net->input_units, output_hidden_cuda
      
   for (int j = 1; j <= hid; j++) {
     sum = 0.0;
     for (int k = 0; k < num_blocks; k++) {	
+      HOST_ACCESS(READ, &hidden_partial_sum[k * hid + j-1]);
       sum += hidden_partial_sum[k * hid + j-1] ;
     }
+    HOST_ACCESS(READ, &net->input_weights[j]);
     sum += net->input_weights[j];
+    HOST_ACCESS(READ, &net->hidden_units[j]);
     net->hidden_units[j] = float(1.0 / (1.0 + exp(-sum)));
   }
-#endif
+  #endif
 
   bpnn_layerforward(net->hidden_units, net->output_units, net->hidden_weights, hid, out);
   bpnn_output_error(net->output_delta, net->target, net->output_units, out, &out_err);
@@ -607,16 +689,26 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 
 #endif  
 
+#ifdef PREF
+  // Prefetch the data to the GPU
+  cudaGetDevice(&device);
+  cudaMemPrefetchAsync(net->hidden_delta, (hid + 1) * sizeof(float), device, stream3);
+  cudaMemPrefetchAsync(net->input_prev_weights,(in + 1) * (hid + 1) * sizeof(float), device, stream4);
+  cudaMemPrefetchAsync(net->input_weights2, (in + 1) * (hid + 1) * sizeof(float), device, stream5);
+#endif
+
 
 #ifdef GPU
 
-  // managed - net->input_units, output_hidden_cuda
-  MAKE_MANAGED(net->hidden_delta);
-  MAKE_MANAGED(net->input_weights2);
-  MAKE_MANAGED(net->input_prev_weights);
-
-  // managed - net->input_units, output_hidden_cuda, net->hidden_delta, net->input_weights2, net->input_prev_weigths
-
+#ifdef PREF
+  bpnn_adjust_weights_cuda<<< grid, threads, 0, stream6>>>(net->hidden_delta,  
+						hid, 
+						net->input_units, 
+						in,
+						net->input_weights2, 
+						net->input_prev_weights
+						);
+#else
   bpnn_adjust_weights_cuda<<< grid, threads >>>(net->hidden_delta,  
 						hid, 
 						net->input_units, 
@@ -624,7 +716,36 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 						net->input_weights2, 
 						net->input_prev_weights
 						);
+#endif
+
   cudaDeviceSynchronize();
+
+  /*
+  // emulate CPU access
+  float dummy;
+  for(int i = 0; i < in + 1; i ++) {
+    HOST_ACCESS(READ, &net->input_units[i]);
+    dummy = net->input_units[i];
+  }
+  for(int i = 0; i < in + 1; i ++){
+    for(int j = 0; j < hid + 1; j++) {
+      HOST_ACCESS(READ, &net->input_weights2[i*(hid+1)+j]);
+      dummy = net->input_weights2[i*(hid+1)+j];
+    }
+  }
+  */
+
+  cudaEventRecord(stop);
+  cudaEventSynchronize(stop);
+
+  float milliseconds = 0;
+  cudaEventElapsedTime(&milliseconds, start, stop);
+
+  printf("Elapsed Time: %fms\n", milliseconds);
+
+  cudaEventDestroy(start);
+  cudaEventDestroy(stop);
+
 
   /*
   cudaMemGetInfo(&free_memory, &total_memory);
@@ -633,15 +754,10 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   cudaMemGetInfo(&free_memory, &total_memory);
   */
 
-  // managed - net->input_units, output_hidden_cuda, net->hidden_delta, net->input_weights2, net->input_prev_weigths
-
   cudaFree(output_hidden_cuda);
-  cudaFreeHost(hidden_partial_sum);
-
-  // managed - net->input_units, net->hidden_delta, net->input_weights2, net->input_prev_weigths
-  MAKE_UNMANAGED(net->input_units);
-  MAKE_UNMANAGED(net->input_weights2);
-  // managed - net->hidden_delta, net->input_prev_weigths
+  printf("free output_hidden_cuda\n");
+  cudaFree(hidden_partial_sum);
+  printf("free hidden_partial_sum\n");
 
 #define DEBUG
 #ifdef DEBUG
@@ -661,17 +777,6 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   fclose(fp2);
   
 #endif
-
-  cudaEventRecord(stop);
-  cudaEventSynchronize(stop);
-
-  float milliseconds = 0;
-  cudaEventElapsedTime(&milliseconds, start, stop);
-
-  printf("Elapsed Time: %fms\n", milliseconds);
-
-  cudaEventDestroy(start);
-  cudaEventDestroy(stop);
 
 #endif   
   

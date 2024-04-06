@@ -82,12 +82,15 @@ void generateRandomGraph(GraphData *graph, int numVertices, int neighborsPerVert
     total_malloc += sizeof(int) * graph->numEdges;
     total_malloc += sizeof(int) * graph->numEdges;
 
-    cudaHostAlloc(&graph->vertexArray, sizeof(int) * graph->numVertices, 0);
-    cudaHostAlloc(&graph->edgeArray, sizeof(int) * graph->numEdges, 0);
-    cudaHostAlloc(&graph->weightArray, sizeof(float) * graph->numEdges, 0);
-    //gpuErrchk(cudaMallocManaged(&graph -> vertexArray,    sizeof(int)   * graph -> numVertices));
-    //gpuErrchk(cudaMallocManaged(&graph -> edgeArray,  sizeof(int)   * graph -> numEdges));
-    //gpuErrchk(cudaMallocManaged(&graph -> weightArray,    sizeof(float) * graph -> numEdges));
+    gpuErrchk(cudaMallocManaged(&graph -> vertexArray,    sizeof(int)   * graph -> numVertices));
+    memset(graph->vertexArray, 0, sizeof(int) * graph->numVertices);
+    printf("alloc vertexArray, size: %lu\n", sizeof(int) * graph->numVertices);
+    gpuErrchk(cudaMallocManaged(&graph -> edgeArray,  sizeof(int)   * graph -> numEdges));
+    memset(graph->edgeArray, 0, sizeof(int) * graph->numEdges);
+    printf("alloc edgeArray, size: %lu\n", sizeof(int) * graph->numEdges);
+    gpuErrchk(cudaMallocManaged(&graph -> weightArray,    sizeof(float) * graph -> numEdges));
+    memset(graph->weightArray, 0, sizeof(float) * graph->numEdges);
+    printf("alloc weightArray, size: %lu\n", sizeof(float) * graph->numEdges);
 
 
     for (int i = 0; i < graph -> numVertices; i++) graph -> vertexArray[i] = i * neighborsPerVertex;
@@ -275,15 +278,25 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
     // --- Create mask array Ma, cost array Ca and updating cost array Ua of size V
     bool    *d_finalizedVertices;           gpuErrchk(cudaMalloc(&d_finalizedVertices,       sizeof(bool)   * graph->numVertices));
     //float   *d_shortestDistances;           gpuErrchk(cudaMallocManaged(&d_shortestDistances,       sizeof(float) * graph->numVertices));
-    float   *d_updatingShortestDistances;   //gpuErrchk(cudaMallocManaged(&d_updatingShortestDistances, sizeof(float) * graph->numVertices));
-    cudaHostAlloc(&d_updatingShortestDistances, sizeof(float) * graph->numVertices, 0);
+    float   *d_updatingShortestDistances;   gpuErrchk(cudaMallocManaged(&d_updatingShortestDistances, sizeof(float) * graph->numVertices));
+    memset(d_updatingShortestDistances, 0, sizeof(float) * graph->numVertices);
+    printf("alloc d_updatingShortestDistances, size: %lu\n", sizeof(float) * graph->numVertices);
 
     //bool *h_finalizedVertices = (bool *)malloc(sizeof(bool) * graph->numVertices);
     bool *h_finalizedVertices;
     cudaMallocHost((void**) &h_finalizedVertices, sizeof(bool) * graph->numVertices);
 
-    MAKE_MANAGED(h_shortestDistances);
-    MAKE_MANAGED(d_updatingShortestDistances);
+    cudaMakeManagedByDevice(d_updatingShortestDistances);
+    cudaMakeManagedByDevice(graph->vertexArray);
+    cudaMakeManagedByDevice(graph->edgeArray);
+    cudaMakeManagedByDevice(graph->weightArray);
+    cudaMakeManagedByDevice(h_shortestDistances);
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
 
     // --- Initialize mask Ma to false, cost array Ca and Updating cost array Ua to \u221e
     initializeArrays <<<iDivUp(graph->numVertices, BLOCK_SIZE), BLOCK_SIZE >>>(d_finalizedVertices, h_shortestDistances,
@@ -295,11 +308,6 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
     // --- Read mask array from device -> host
     gpuErrchk(cudaMemcpy(h_finalizedVertices, d_finalizedVertices, sizeof(bool) * graph->numVertices, cudaMemcpyDeviceToHost));
 
-    // managed - h_shortestDistances, d_updatingShortestDistances
-    MAKE_MANAGED(graph->vertexArray);
-    MAKE_MANAGED(graph->edgeArray);
-    MAKE_MANAGED(graph->weightArray);
-    // managed - h_shortestDistances, d_updatingShortestDistances, graph->vertexArray, graph->edgeArray, graph->weightArray
     int iteration = 0;
     while (!allFinalizedVertices(h_finalizedVertices, graph->numVertices) && iteration < MAX_ITERATION) {
 
@@ -328,15 +336,40 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
     //gpuErrchk(cudaMemcpy(h_shortestDistances, d_shortestDistances, sizeof(float) * graph->numVertices, cudaMemcpyDeviceToHost));
 
     cudaDeviceSynchronize();
+    
+    /*
+    // emulate host access
+    float dummy;
+    for (int k = 0; k < graph->numVertices; k++) {
+        HOST_ACCESS(READ, &h_shortestDistances[k]);
+        dummy = h_shortestDistances[k];
+    }
+    */
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
     cudaFreeHost(h_finalizedVertices);
 
     gpuErrchk(cudaFree(graph -> vertexArray));
+    printf("free vertexArray\n");
     gpuErrchk(cudaFree(graph -> edgeArray));
+    printf("free edgeArray\n");
     gpuErrchk(cudaFree(graph -> weightArray));
+    printf("free weightArray\n");
     gpuErrchk(cudaFree(d_finalizedVertices));
+    printf("free finalizedVertices\n");
     //gpuErrchk(cudaFree(d_shortestDistances));
     gpuErrchk(cudaFree(d_updatingShortestDistances));
+    printf("free d_updatingShortestDistances\n");
 }
 
 /****************/
@@ -406,21 +439,24 @@ int main(int argc, char* argv[]) {
     // --- Allocate space for the h_shortestDistancesGPU
     float *h_shortestDistancesGPU;// = (float*)malloc(sizeof(float) * graph.numVertices);
     total_malloc += sizeof(float) * graph.numVertices;
-    cudaHostAlloc(&h_shortestDistancesGPU, sizeof(float) * graph.numVertices, 0);
+    gpuErrchk(cudaMallocManaged(&h_shortestDistancesGPU,       sizeof(float) * graph.numVertices));
+    memset(h_shortestDistancesGPU, 0, sizeof(float) * graph.numVertices);
+    printf("alloc h_shortestDistancesGPU, size: %lu\n", sizeof(float) * graph.numVertices);
 
     dijkstraGPU(&graph, sourceVertex, h_shortestDistancesGPU);
-
-    MAKE_UNMANAGED(h_shortestDistancesGPU);
 
     FILE *fp;
     fp = fopen ("output.txt", "w+");
     fprintf(fp,"\nGPU results\n");
-    for (int k = 0; k < numVertices; k++) 
-         fprintf(fp, "From vertex %i to vertex %i = %f\n", sourceVertex, k, h_shortestDistancesGPU[k]);
+    for (int k = 0; k < numVertices; k++) {
+        fprintf(fp, "From vertex %i to vertex %i = %f\n", sourceVertex, k,
+                h_shortestDistancesGPU[k]);
+    }
     fclose(fp);
 
     //free(h_shortestDistancesCPU);
-    cudaFreeHost(h_shortestDistancesGPU);
+    cudaFree(h_shortestDistancesGPU);
+    printf("free h_shortestDistancesGPU");
 
     MEM_TEST();
 
