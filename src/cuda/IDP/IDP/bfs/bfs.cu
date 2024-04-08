@@ -132,10 +132,15 @@ void BFSGraph( int argc, char** argv)
 	{
                 fscanf(fp,"%d %d",&start,&edgeno);
 		graph_nodes[i].starting = start;
+        HOST_ACCESS(WRITE, &graph_nodes[i].starting);
 		graph_nodes[i].no_of_edges = edgeno;
+        HOST_ACCESS(WRITE, &graph_nodes[i].no_of_edges);
 		graph_mask[i]=false;
+        HOST_ACCESS(WRITE, &graph_mask[i]);
 		updating_graph_mask[i]=false;
+        HOST_ACCESS(WRITE, &updating_graph_mask[i]);
 		graph_visited[i]=false;
+        HOST_ACCESS(WRITE, &graph_visited[i]);
 	}
 
 	//read the source node from the file
@@ -144,7 +149,9 @@ void BFSGraph( int argc, char** argv)
 
 	//set the source node as true in the mask
 	graph_mask[source]=true;
+    HOST_ACCESS(WRITE, &graph_mask[source]);
 	graph_visited[source]=true;
+    HOST_ACCESS(WRITE, &graph_visited[source]);
 
 	fscanf(fp,"%d",&edge_list_size);
 
@@ -160,6 +167,7 @@ void BFSGraph( int argc, char** argv)
 		fscanf(fp,"%d",&id);
 		fscanf(fp,"%d",&edgeCost);
 		graph_edges[i] = id;
+        HOST_ACCESS(WRITE, &graph_edges[i]);
 	}
 
 	if(fp)
@@ -173,13 +181,16 @@ void BFSGraph( int argc, char** argv)
     memset(cost, 0, sizeof(int)*no_of_nodes);
     printf("alloc cost, size: %lu\n", no_of_nodes * sizeof(int));
 
-	for(int i=0;i<no_of_nodes;i++)
+	for(int i=0;i<no_of_nodes;i++) {
 		cost[i]=-1;
+        HOST_ACCESS(WRITE, &cost[i]);
+    }
 	cost[source]=0;
+    HOST_ACCESS(WRITE, &cost[source]);
 	
-        //make a bool to check if the execution is over
-        bool *d_over;
-        cudaMalloc( (void**) &d_over, sizeof(bool));
+    //make a bool to check if the execution is over
+    bool *d_over;
+    cudaMalloc( (void**) &d_over, sizeof(bool));
 
 	printf("Copied Everything to GPU memory\n");
 

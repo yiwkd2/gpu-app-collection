@@ -121,6 +121,7 @@ void runTest( int argc, char** argv)
     	for (int i = 0 ; i < max_cols; i++){
 		for (int j = 0 ; j < max_rows; j++){
 			itemsets[i*max_cols+j] = 0;
+            HOST_ACCESS(WRITE, &itemsets[i*max_cols+j]);
 		}
 	}
 	
@@ -128,22 +129,29 @@ void runTest( int argc, char** argv)
 	
 	for( int i=1; i< max_rows ; i++){    //please define your own sequence. 
        		itemsets[i*max_cols] = rand() % 10 + 1;
+            HOST_ACCESS(WRITE, &itemsets[i*max_cols]);
 	}
     	for( int j=1; j< max_cols ; j++){    //please define your own sequence.
        		itemsets[j] = rand() % 10 + 1;
+            HOST_ACCESS(WRITE, &itemsets[j]);
 	}
 
 
 	for (int i = 1 ; i < max_cols; i++){
 		for (int j = 1 ; j < max_rows; j++){
 			referrence[i*max_cols+j] = blosum62[itemsets[i*max_cols]][itemsets[j]];
+            HOST_ACCESS(WRITE, &referrence[i*max_cols+j]);
 		}
 	}
 
-    	for( int i = 1; i< max_rows ; i++)
+    	for( int i = 1; i< max_rows ; i++) {
        		itemsets[i*max_cols] = -i * penalty;
-	for( int j = 1; j< max_cols ; j++)
+            HOST_ACCESS(WRITE, &itemsets[i*max_cols]);
+        }
+	for( int j = 1; j< max_cols ; j++) {
        		itemsets[j] = -j * penalty;
+            HOST_ACCESS(WRITE, &itemsets[j]);
+    }
 
 #ifdef PREF
 	int device = -1;

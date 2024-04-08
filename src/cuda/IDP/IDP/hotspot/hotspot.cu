@@ -84,6 +84,7 @@ void readinput(float *vect, int grid_rows, int grid_cols, char *file){
 		if ((sscanf(str, "%f", &val) != 1))
             fprintf(stderr, "error: invalid file format\n");
 		vect[i*grid_cols+j] = val;
+        HOST_ACCESS(WRITE, &vect[i*grid_cols+j]);
 	}
 
 	fclose(fp);	

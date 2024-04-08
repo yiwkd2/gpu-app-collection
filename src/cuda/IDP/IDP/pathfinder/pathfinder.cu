@@ -61,9 +61,11 @@ init(int argc, char** argv)
         	{
 			if (i == 0) {
 				gpuResult[0][j] = rand() % 10;
+                HOST_ACCESS(WRITE, &gpuResult[0][j]);
 				data[i*cols + j] = gpuResult[0][j];
 			} else {
 				gpuWall[(i-1)*cols + j] = rand() %10;
+                HOST_ACCESS(WRITE, &gpuWall[(i-1)*cols + j]);
 				data[i*cols + j] = gpuWall[(i-1)*cols + j];
 			}
         	}

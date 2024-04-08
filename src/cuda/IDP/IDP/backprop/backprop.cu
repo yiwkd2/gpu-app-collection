@@ -74,6 +74,7 @@ void bpnn_copy(float *wf,float *wt,int m,int n)
   for (i = 0; i <= m; i++) {
     for (j = 0; j <= n; j++) {
       wt[i*(n+1)+j] =  wf[i*(n+1)+j];
+      HOST_ACCESS(WRITE, &wt[i*(n+1)+j]);
     }
   }
 }
@@ -85,6 +86,7 @@ void bpnn_randomize_weights(float *w,int m,int n)
   for (i = 0; i <= m; i++) {
     for (j = 0; j <= n; j++) {
       w[i*(n+1)+j] =  (float) rand()/RAND_MAX;
+      HOST_ACCESS(WRITE, &w[i*(n+1)+j]);
     }
   }
 }
@@ -95,6 +97,7 @@ void bpnn_randomize_row(float *w,int m)
   for (i = 0; i <= m; i++) {
     //w[i] = (float) rand()/RAND_MAX;
     w[i] = 0.1;
+    HOST_ACCESS(WRITE, &w[i]);
   }
 }
 
@@ -106,6 +109,7 @@ void bpnn_zero_weights(float *w,int m,int n)
   for (i = 0; i <= m; i++) {
     for (j = 0; j <= n; j++) {
       w[i*(n+1)+j] =  0.0;
+      HOST_ACCESS(WRITE, &w[i*(n+1)+j]);
     }
   }
 }
@@ -500,6 +504,7 @@ void load(BPNN *net)
   k = 1;
   for (int i = 0; i < nr; i++) {
 	  units[k] = (float) rand()/RAND_MAX ;
+      HOST_ACCESS(WRITE, &units[k]);
 	  k++;
     }
 }

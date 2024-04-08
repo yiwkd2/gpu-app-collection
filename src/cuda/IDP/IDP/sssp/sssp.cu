@@ -110,7 +110,9 @@ void generateRandomGraph(GraphData *graph, int numVertices, int neighborsPerVert
                 if (goOn == true) tempArray[l] = temp;
             }
             graph -> edgeArray  [k * neighborsPerVertex + l] = temp;
+            HOST_ACCESS(WRITE, &graph->edgeArray[k * neighborsPerVertex + l]);
             graph -> weightArray[k * neighborsPerVertex + l] = (float)(rand() % 1000) / 1000.0f;
+            HOST_ACCESS(WRITE, &graph->weightArray[k * neighborsPerVertex + l]);
 	    //printf("%lf\n",graph -> weightArray[k * neighborsPerVertex + l]);
         }
     }
@@ -318,12 +320,10 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
 
             Kernel1 <<<iDivUp(graph->numVertices, BLOCK_SIZE), BLOCK_SIZE >>>(graph -> vertexArray, graph -> edgeArray, graph -> weightArray, d_finalizedVertices, h_shortestDistances,
                                                             d_updatingShortestDistances, graph->numVertices, graph->numEdges);
-            cudaDeviceSynchronize();
             //gpuErrchk(cudaPeekAtLastError());
             //gpuErrchk(cudaDeviceSynchronize());
             Kernel2 <<<iDivUp(graph->numVertices, BLOCK_SIZE), BLOCK_SIZE >>>(graph -> vertexArray, graph -> edgeArray, graph -> weightArray, d_finalizedVertices, h_shortestDistances, d_updatingShortestDistances,
                                                             graph->numVertices);
-            cudaDeviceSynchronize();
             //gpuErrchk(cudaPeekAtLastError());
             //gpuErrchk(cudaDeviceSynchronize());
 	    iteration++;

@@ -52,8 +52,11 @@ void init_arrays(DATA_TYPE* _fict_, DATA_TYPE* ex, DATA_TYPE* ey, DATA_TYPE* hz)
 		for (j = 0; j < NY; j++)
 		{
 			ex[i*NY + j] = ((DATA_TYPE) i*(j+1) + 1) / NX;
+            HOST_ACCESS(WRITE, &ex[i*NY + j]);
 			ey[i*NY + j] = ((DATA_TYPE) (i-1)*(j+2) + 2) / NX;
+            HOST_ACCESS(WRITE, &ey[i*NY + j]);
 			hz[i*NY + j] = ((DATA_TYPE) (i-9)*(j+4) + 3) / NX;
+            HOST_ACCESS(WRITE, &hz[i*NY + j]);
 		}
 	}
 }
@@ -199,12 +202,11 @@ void fdtdCuda(DATA_TYPE* _fict_, DATA_TYPE* ex, DATA_TYPE* ey, DATA_TYPE* hz)//,
 	for(int t = 0; t< tmax; t++)
 	{
 		fdtd_step1_kernel<<<grid,block>>>(NX, NY, _fict_, ex, ey, hz, t);
-		cudaDeviceSynchronize();
 		fdtd_step2_kernel<<<grid,block>>>(NX, NY, ex, ey, hz, t);
-		cudaDeviceSynchronize();
 		fdtd_step3_kernel<<<grid,block>>>(NX, NY, ex, ey, hz, t);
-		cudaDeviceSynchronize();
 	}
+
+    cudaDeviceSynchronize();
 	
 	//t_end = rtclock();
     	//fprintf(stdout, "GPU Runtime: %0.6lfs\n", t_end - t_start);

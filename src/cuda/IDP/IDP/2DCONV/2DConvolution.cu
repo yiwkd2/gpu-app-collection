@@ -42,6 +42,7 @@ void init(DATA_TYPE* A)
 		for (j = 0; j < NJ; ++j)
 		{
 			A[i*NJ + j] = (float)rand()/RAND_MAX;
+            HOST_ACCESS(WRITE, &A[i*NJ + j]);
         	}
     	}
 }

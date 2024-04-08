@@ -117,6 +117,7 @@ runTest( int argc, char** argv)
 
     for (int k = 0;  k < size_I; k++ ) {
         J_shared[k] = (float)exp(I[k]) ;
+        HOST_ACCESS(WRITE, &J_shared[k]);
     }
 
     cudaMakeManagedByDevice(C_cuda);
