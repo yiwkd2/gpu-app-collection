@@ -295,7 +295,6 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
     // --- Initialize mask Ma to false, cost array Ca and Updating cost array Ua to \u221e
     initializeArrays <<<iDivUp(graph->numVertices, BLOCK_SIZE), BLOCK_SIZE >>>(d_finalizedVertices, h_shortestDistances,
                                                             d_updatingShortestDistances, sourceVertex, graph -> numVertices);
-    cudaDeviceSynchronize();
     //gpuErrchk(cudaPeekAtLastError());
     //gpuErrchk(cudaDeviceSynchronize());
 
@@ -312,12 +311,10 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
 
             Kernel1 <<<iDivUp(graph->numVertices, BLOCK_SIZE), BLOCK_SIZE >>>(graph -> vertexArray, graph -> edgeArray, graph -> weightArray, d_finalizedVertices, h_shortestDistances,
                                                             d_updatingShortestDistances, graph->numVertices, graph->numEdges);
-            cudaDeviceSynchronize();
             //gpuErrchk(cudaPeekAtLastError());
             //gpuErrchk(cudaDeviceSynchronize());
             Kernel2 <<<iDivUp(graph->numVertices, BLOCK_SIZE), BLOCK_SIZE >>>(graph -> vertexArray, graph -> edgeArray, graph -> weightArray, d_finalizedVertices, h_shortestDistances, d_updatingShortestDistances,
                                                             graph->numVertices);
-            cudaDeviceSynchronize();
             //gpuErrchk(cudaPeekAtLastError());
             //gpuErrchk(cudaDeviceSynchronize());
 	    iteration++;
