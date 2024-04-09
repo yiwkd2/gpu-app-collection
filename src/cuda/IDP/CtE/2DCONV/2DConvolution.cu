@@ -108,6 +108,7 @@ int main(int argc, char *argv[])
 
     cudaEventRecord(start);
 
+    cudaMemset(B_cuda, 0, NI * NJ * sizeof(DATA_TYPE));
     cudaMemcpy(A_cuda, A, NI * NJ * sizeof(DATA_TYPE), cudaMemcpyHostToDevice);
 
 	convolution2DCuda(A_cuda, B_cuda);

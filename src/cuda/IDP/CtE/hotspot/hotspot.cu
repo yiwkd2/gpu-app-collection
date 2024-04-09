@@ -329,6 +329,7 @@ void run(int argc, char** argv)
     cudaEventRecord(start);
 
     cudaMemcpy(MatrixTemp[0], FilesavingTemp, sizeof(float)*size, cudaMemcpyHostToDevice);
+    cudaMemset(MatrixTemp[1], 0, sizeof(float)*size);
     cudaMemcpy(MatrixPower, FilesavingPower, sizeof(float)*size, cudaMemcpyHostToDevice);
 
     //printf("Start computing the transient temperature\n");

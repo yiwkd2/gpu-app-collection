@@ -150,6 +150,12 @@ runTest( int argc, char** argv)
 
     cudaEventRecord(start);
 
+    cudaMemset(C_cuda, 0, sizeof(float)* size_I);
+    cudaMemset(E_C, 0, sizeof(float)* size_I);
+    cudaMemset(W_C, 0, sizeof(float)* size_I);
+    cudaMemset(S_C, 0, sizeof(float)* size_I);
+    cudaMemset(N_C, 0, sizeof(float)* size_I);
+
 	//printf("Start the SRAD main loop\n");
  for (iter=0; iter< niter; iter++){
 		sum=0; sum2=0;

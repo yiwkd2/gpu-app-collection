@@ -264,6 +264,9 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
 
     cudaEventRecord(start);
 
+    cudaMemset(d_shortestDistances, 0, sizeof(float) * graph->numVertices);
+    cudaMemset(d_updatingShortestDistances, 0, sizeof(float) * graph->numVertices);
+
     // --- Copy adjacency-list to the device
     gpuErrchk(cudaMemcpy(d_vertexArray, graph -> vertexArray, sizeof(int)   * graph -> numVertices, cudaMemcpyHostToDevice));
     gpuErrchk(cudaMemcpy(d_edgeArray,   graph -> edgeArray,   sizeof(int)   * graph -> numEdges,    cudaMemcpyHostToDevice));

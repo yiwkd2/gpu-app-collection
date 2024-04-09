@@ -212,6 +212,7 @@ void run(int argc, char** argv)
     cudaEventRecord(start);
 
     cudaMemcpy(gpuResult[0], data, sizeof(int)*cols, cudaMemcpyHostToDevice);
+    cudaMemset(gpuResult[1], 0, sizeof(int)*cols);
     cudaMemcpy(gpuWall, data+cols, sizeof(int)*(size-cols), cudaMemcpyHostToDevice);
 
     int final_ret = calc_path(gpuWall, gpuResult, rows, cols, \

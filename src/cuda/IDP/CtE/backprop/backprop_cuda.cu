@@ -122,9 +122,11 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   //printf("in= %d, hid = %d, numblocks = %d\n", in, hid, num_blocks);
   
   cudaMemcpy(input_cuda, net->input_units, (in + 1) * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemset(output_hidden_cuda, 0, (hid + 1) * sizeof(float));
   cudaMemcpy(input_hidden_cuda, input_weights_one_dim, (in + 1) * (hid + 1) * sizeof(float), cudaMemcpyHostToDevice);
-
-  
+  cudaMemset(hidden_partial_sum, 0, num_blocks * WIDTH * sizeof(float));
+  cudaMemset(hidden_delta_cuda, 0, (hid + 1) * sizeof(float));
+  cudaMemset(input_prev_weights_cuda, 0, (in + 1) * (hid + 1) * sizeof(float));
   
   bpnn_layerforward_CUDA<<< grid, threads >>>(input_cuda,
 	                                          output_hidden_cuda,
