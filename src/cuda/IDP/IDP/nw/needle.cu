@@ -66,7 +66,7 @@ main( int argc, char** argv)
 
 void usage(int argc, char **argv)
 {
-	fprintf(stderr, "Usage: %s <max_rows/max_cols> <penalty> <memory_ratio>\n", argv[0]);
+	fprintf(stderr, "Usage: %s <max_rows/max_cols> <penalty> <working_set_ratio>\n", argv[0]);
 	fprintf(stderr, "\t<dimension>  - x and y dimensions\n");
 	fprintf(stderr, "\t<penalty> - penalty(positive integer)\n");
 	exit(1);
@@ -85,7 +85,7 @@ void runTest( int argc, char** argv)
 		max_rows = atoi(argv[1]);
 		max_cols = atoi(argv[1]);
 		penalty = atoi(argv[2]);
-        memory_ratio = atoi(argv[3]);
+        working_set_ratio = atoi(argv[3]);
 	}
     else{
         usage(argc, argv);

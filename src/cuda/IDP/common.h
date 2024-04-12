@@ -15,7 +15,7 @@
 #define MEM_TEST() do {} while (0)
 #endif
 
-unsigned memory_ratio = 100;
+unsigned working_set_ratio = 100;
 size_t total_malloc = 0;
 size_t free_memory, total_memory;
 
@@ -24,13 +24,13 @@ FILE* fapp_trace = fopen("app_trace.txt", "w");
 void reserve_gpu_memory() {
     void* dummy;
     uint64_t extra_malloc_size;
-    if (memory_ratio < 100) {
+    if (working_set_ratio > 100) {
         cudaMemGetInfo(&free_memory, &total_memory);
         extra_malloc_size = free_memory -
-            (uint64_t) (total_malloc * (float) memory_ratio / 100);
+            (uint64_t) (total_malloc * 100 / (float) working_set_ratio);
 
-        printf("(before malloc) memory ratio: %f%%\n",
-                free_memory / (float) total_malloc * 100);
+        printf("(before malloc) working set ratio: %f%%\n",
+                (float) total_malloc / free_memory * 100);
 
         cudaError_t status = cudaMalloc(&dummy, extra_malloc_size);
         if (status != cudaSuccess) {
@@ -39,8 +39,8 @@ void reserve_gpu_memory() {
             exit(0);
         }
         cudaMemGetInfo(&free_memory, &total_memory);
-        printf("(after malloc) memory ratio: %f%%\n",
-                free_memory / (float) total_malloc * 100);
+        printf("(after malloc) working set ratio: %f%%\n",
+                (float) total_malloc / free_memory * 100);
     }
     fflush(stdout);
 }

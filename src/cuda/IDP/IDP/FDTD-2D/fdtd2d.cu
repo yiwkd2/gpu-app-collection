@@ -223,13 +223,13 @@ void fdtdCuda(DATA_TYPE* _fict_, DATA_TYPE* ex, DATA_TYPE* ey, DATA_TYPE* hz)//,
 int main(int argc, char *argv[])
 {
     if (argc != 4) {
-        fprintf(stderr, "usage: fdtd2d <tmax> <problem_size> <memory_ratio>\n");
+        fprintf(stderr, "usage: fdtd2d <tmax> <problem_size> <working_set_ratio>\n");
         exit(0);
     }
     tmax = atoi(argv[1]);
     NX = atoi(argv[2]);
     NY = NX;
-    memory_ratio = atoi(argv[3]);
+    working_set_ratio = atoi(argv[3]);
 
 	//double t_start, t_end;
 

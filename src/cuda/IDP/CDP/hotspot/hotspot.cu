@@ -258,14 +258,14 @@ int compute_tran_temp(float *MatrixPower,float *MatrixTemp[2], int col, int row,
 
 void usage(int argc, char **argv)
 {
-	fprintf(stderr, "Usage: %s <grid_rows/grid_cols> <pyramid_height> <sim_time> <temp_file> <power_file> <output_file> <memory_ratio>\n", argv[0]);
+	fprintf(stderr, "Usage: %s <grid_rows/grid_cols> <pyramid_height> <sim_time> <temp_file> <power_file> <output_file> <working_set_ratio>\n", argv[0]);
 	fprintf(stderr, "\t<grid_rows/grid_cols>  - number of rows/cols in the grid (positive integer)\n");
 	fprintf(stderr, "\t<pyramid_height> - pyramid heigh(positive integer)\n");
 	fprintf(stderr, "\t<sim_time>   - number of iterations\n");
 	fprintf(stderr, "\t<temp_file>  - name of the file containing the initial temperature values of each cell\n");
 	fprintf(stderr, "\t<power_file> - name of the file containing the dissipated power values of each cell\n");
 	fprintf(stderr, "\t<output_file> - name of the output file\n");
-	fprintf(stderr, "\t<memory_ratio> - memory ratio to working set\n");
+	fprintf(stderr, "\t<working_set_ratio> - memory ratio to working set\n");
 	exit(1);
 }
 
@@ -299,7 +299,7 @@ void run(int argc, char** argv)
     pfile=argv[5];
     ofile=argv[6];
 
-    memory_ratio = atoi(argv[7]);
+    working_set_ratio = atoi(argv[7]);
 	
     size=grid_rows*grid_cols;
 

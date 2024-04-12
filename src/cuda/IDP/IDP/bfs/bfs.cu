@@ -53,7 +53,7 @@ int main( int argc, char** argv)
 
 void Usage(int argc, char**argv){
 
-fprintf(stderr,"Usage: %s <input_file> <memory_ratio>\n", argv[0]);
+fprintf(stderr,"Usage: %s <input_file> <working_set_ratio>\n", argv[0]);
 
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -69,7 +69,7 @@ void BFSGraph( int argc, char** argv)
 	}
 	
 	input_f = argv[1];
-    memory_ratio = atoi(argv[2]);
+    working_set_ratio = atoi(argv[2]);
 	printf("Reading File\n");
 	//Read in Graph from a file
 	fp = fopen(input_f,"r");

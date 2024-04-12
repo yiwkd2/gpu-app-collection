@@ -377,11 +377,11 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
 /****************/
 int main(int argc, char* argv[]) {
     if (argc != 3) {
-        fprintf(stderr, "usage: sssp <exp> <memory_ratio>\n");
+        fprintf(stderr, "usage: sssp <exp> <working_set_ratio>\n");
         exit(0);
     }
     int exp = atoi(argv[1]);
-    memory_ratio = atoi(argv[2]);
+    working_set_ratio = atoi(argv[2]);
 
     // --- Number of graph vertices
     int numVertices = 1<<exp;

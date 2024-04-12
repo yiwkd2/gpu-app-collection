@@ -82,12 +82,12 @@ void convolution2DCuda(DATA_TYPE* A, DATA_TYPE* B)
 int main(int argc, char *argv[])
 {
     if (argc != 3) {
-        fprintf(stderr, "usage: 2dconv <problem_size> <memory_ratio>");
+        fprintf(stderr, "usage: 2dconv <problem_size> <working_set_ratio>");
         exit(0);
     }
     NI = atoi(argv[1]);
     NJ = NI;
-    memory_ratio = atoi(argv[2]);
+    working_set_ratio = atoi(argv[2]);
 
 	DATA_TYPE* A;
 	DATA_TYPE* B;  

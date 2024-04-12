@@ -30,7 +30,7 @@ init(int argc, char** argv)
 		cols = atoi(argv[1]);
 		rows = atoi(argv[2]);
         pyramid_height=atoi(argv[3]);
-        memory_ratio = atoi(argv[4]);
+        working_set_ratio = atoi(argv[4]);
 	}else{
         printf("Usage: dynproc row_len col_len pyramid_height\n");
         exit(0);

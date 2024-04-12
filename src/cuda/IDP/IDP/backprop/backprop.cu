@@ -515,11 +515,11 @@ int setup(int argc, char *argv[])
   int seed;
 
   if (argc!=3){
-  fprintf(stderr, "usage: backprop <num of input elements> <memory_ratio>\n");
+  fprintf(stderr, "usage: backprop <num of input elements> <working_set_ratio>\n");
   exit(0);
   }
   layer_size = atoi(argv[1]);
-  memory_ratio = atoi(argv[2]);
+  working_set_ratio = atoi(argv[2]);
   if (layer_size%16!=0){
   fprintf(stderr, "The number of input points must be divided by 16\n");
   exit(0);

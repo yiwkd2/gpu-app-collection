@@ -17,7 +17,7 @@ void random_matrix(float *I, int rows, int cols);
 void runTest( int argc, char** argv);
 void usage(int argc, char **argv)
 {
-	fprintf(stderr, "Usage: %s <rows> <cols> <y1> <y2> <x1> <x2> <lamda> <no. of iter> <memory_ratio>\n", argv[0]);
+	fprintf(stderr, "Usage: %s <rows> <cols> <y1> <y2> <x1> <x2> <lamda> <no. of iter> <working_set_ratio>\n", argv[0]);
 	fprintf(stderr, "\t<rows>   - number of rows\n");
 	fprintf(stderr, "\t<cols>    - number of cols\n");
 	fprintf(stderr, "\t<y1> 	 - y1 value of the speckle\n");
@@ -71,7 +71,7 @@ runTest( int argc, char** argv)
 		c2   = atoi(argv[6]);  //x2 position of the speckle
 		lambda = atof(argv[7]); //Lambda value
 		niter = atoi(argv[8]); //number of iterations
-	    memory_ratio = atoi(argv[9]);
+	    working_set_ratio = atoi(argv[9]);
 	}
     else{
         usage(argc, argv);
