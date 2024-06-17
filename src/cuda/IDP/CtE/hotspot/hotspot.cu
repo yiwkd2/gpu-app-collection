@@ -336,7 +336,7 @@ void run(int argc, char** argv)
     int ret = compute_tran_temp(MatrixPower,MatrixTemp,grid_cols,grid_rows, \
 	 total_iterations,pyramid_height, blockCols, blockRows, borderCols, borderRows);
 	//printf("Ending simulation\n");
-    cudaMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float)*size, cudaMemcpyDeviceToHost);
+    //cudaMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float)*size, cudaMemcpyDeviceToHost);
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
@@ -348,6 +348,8 @@ void run(int argc, char** argv)
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
+
+    cudaMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float)*size, cudaMemcpyDeviceToHost);
 
     writeoutput(MatrixOut,grid_rows, grid_cols, ofile);
 

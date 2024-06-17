@@ -208,7 +208,7 @@ void BFSGraph( int argc, char** argv)
 	printf("Kernel Executed %d times\n",k);
 
 	// copy result from device to host
-	cudaMemcpy( h_cost, d_cost, sizeof(int)*no_of_nodes, cudaMemcpyDeviceToHost) ;
+	//cudaMemcpy( h_cost, d_cost, sizeof(int)*no_of_nodes, cudaMemcpyDeviceToHost) ;
 
     cudaEventRecord(stop_);
     cudaEventSynchronize(stop_);
@@ -220,6 +220,9 @@ void BFSGraph( int argc, char** argv)
 
     cudaEventDestroy(start_);
     cudaEventDestroy(stop_);
+
+	// copy result from device to host
+	cudaMemcpy( h_cost, d_cost, sizeof(int)*no_of_nodes, cudaMemcpyDeviceToHost) ;
 
 	//Store the result into a file
 	FILE *fpo = fopen("result.txt","w");
