@@ -195,8 +195,8 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
 
-  cudaMemcpy(net->input_units, input_cuda, (in + 1) * sizeof(float), cudaMemcpyDeviceToHost);
-  cudaMemcpy(input_weights_one_dim, input_hidden_cuda, (in + 1) * (hid + 1) * sizeof(float), cudaMemcpyDeviceToHost);
+  //cudaMemcpy(net->input_units, input_cuda, (in + 1) * sizeof(float), cudaMemcpyDeviceToHost);
+  //cudaMemcpy(input_weights_one_dim, input_hidden_cuda, (in + 1) * (hid + 1) * sizeof(float), cudaMemcpyDeviceToHost);
 
   FILE* ofile = fopen("result.txt", "w");
   unsigned long long int checksum = 0; 
