@@ -23,8 +23,8 @@ int main(int argc, char *argv[])
   int N = 1<<(atoi(argv[1]));
   float *x, *y, *d_x, *d_y;
 
-  x = (float*)malloc(N*sizeof(float));
-  y = (float*)malloc(N*sizeof(float));
+  cudaMallocHost((void**) &x, N*sizeof(float));
+  cudaMallocHost((void**) &y, N*sizeof(float));
  
   cudaMalloc(&d_x, N*sizeof(float));
   cudaMalloc(&d_y, N*sizeof(float));
@@ -35,6 +35,12 @@ int main(int argc, char *argv[])
     y[i] = 2.0f;
   }
 
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
+  cudaEventRecord(start);
+
   cudaMemcpy(d_x, x, N*sizeof(float), cudaMemcpyHostToDevice);
   cudaMemcpy(d_y, y, N*sizeof(float), cudaMemcpyHostToDevice);
  
@@ -44,6 +50,17 @@ int main(int argc, char *argv[])
   add<<<numBlocks, blockSize>>>(N, d_x, d_y);
 
   cudaMemcpy(y, d_y, N*sizeof(float), cudaMemcpyDeviceToHost); 
+
+  cudaEventRecord(stop);
+  cudaEventSynchronize(stop);
+	
+  float milliseconds = 0;
+  cudaEventElapsedTime(&milliseconds, start, stop);
+
+  printf("Elapsed Time: %fms\n", milliseconds);
+
+  cudaEventDestroy(start);
+  cudaEventDestroy(stop);
  
   // Check for errors (all values should be 3.0f)
   float maxError = 0.0f;
@@ -54,8 +71,8 @@ int main(int argc, char *argv[])
   // Free memory
   cudaFree(d_x);
   cudaFree(d_y);
-  free(x);
-  free(y);
+  cudaFreeHost(x);
+  cudaFreeHost(y);
   
   return 0;
 }
