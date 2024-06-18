@@ -34,6 +34,7 @@ data:
 IDP:
 	mkdir -p $(BINDIR)/$(BINSUBDIR)/
 	cd cuda/IDP/; make
+	cp cuda/IDP/CtE/AddVectors/add_vectors_CtE $(BINDIR)/$(BINSUBDIR)/add_vectors_CtE
 	cp cuda/IDP/CtE/2DCONV/2dconv_CtE $(BINDIR)/$(BINSUBDIR)/2dconv_CtE
 	cp cuda/IDP/CtE/backprop/backprop_CtE $(BINDIR)/$(BINSUBDIR)/backprop_CtE
 	cp cuda/IDP/CtE/bfs/bfs_CtE $(BINDIR)/$(BINSUBDIR)/bfs_CtE
@@ -70,6 +71,7 @@ IDP:
 	cp cuda/IDP/CDP/pathfinder/pathfinder_CDP_hw $(BINDIR)/$(BINSUBDIR)/pathfinder_CDP_hw
 	cp cuda/IDP/CDP/srad_v2/srad_CDP_hw $(BINDIR)/$(BINSUBDIR)/srad_CDP_hw
 	cp cuda/IDP/CDP/sssp/sssp_CDP_hw $(BINDIR)/$(BINSUBDIR)/sssp_CDP_hw
+	cp cuda/IDP/IDP/AddVectors/add_vectors_IDP $(BINDIR)/$(BINSUBDIR)/add_vectors_IDP
 	cp cuda/IDP/IDP/2DCONV/2dconv_IDP $(BINDIR)/$(BINSUBDIR)/2dconv_IDP
 	cp cuda/IDP/IDP/backprop/backprop_IDP $(BINDIR)/$(BINSUBDIR)/backprop_IDP
 	cp cuda/IDP/IDP/bfs/bfs_IDP $(BINDIR)/$(BINSUBDIR)/bfs_IDP
@@ -79,6 +81,7 @@ IDP:
 	cp cuda/IDP/IDP/pathfinder/pathfinder_IDP $(BINDIR)/$(BINSUBDIR)/pathfinder_IDP
 	cp cuda/IDP/IDP/srad_v2/srad_IDP $(BINDIR)/$(BINSUBDIR)/srad_IDP
 	cp cuda/IDP/IDP/sssp/sssp_IDP $(BINDIR)/$(BINSUBDIR)/sssp_IDP
+	cp cuda/IDP/MS/AddVectors/add_vectors_MS $(BINDIR)/$(BINSUBDIR)/add_vectors_MS
 
 ###################################################################################################3
 # Rodinia 2.0 Functional Test Stuff
