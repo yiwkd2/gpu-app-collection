@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
     int numBlocks = ((N / num_streams) + blockSize - 1) / blockSize;
     add<<<numBlocks, blockSize, 0, stream[i]>>>(N / num_streams, d_x[i], d_y[i]);
 
-    cudaMemcpyAsync(y[i], d_y[i], (N / num_streams) * sizeof(float), cudaMemcpyDeviceToHost, stream[i]);
+    //cudaMemcpyAsync(y[i], d_y[i], (N / num_streams) * sizeof(float), cudaMemcpyDeviceToHost, stream[i]);
   }
 
   cudaDeviceSynchronize();
@@ -91,10 +91,10 @@ int main(int argc, char *argv[])
   std::cout << "Max error: " << maxError << std::endl;
  
   // Free memory
-  cudaFree(d_x);
-  cudaFree(d_y);
-  cudaFreeHost(x);
-  cudaFreeHost(y);
+  cudaFree(d_x[0]);
+  cudaFree(d_y[0]);
+  cudaFreeHost(x[0]);
+  cudaFreeHost(y[0]);
   
   return 0;
 }
