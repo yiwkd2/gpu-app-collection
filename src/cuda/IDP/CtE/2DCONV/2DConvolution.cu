@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
 
-    cudaMemcpy(B, B_cuda, NI * NJ * sizeof(DATA_TYPE), cudaMemcpyDeviceToHost);
+    //cudaMemcpy(B, B_cuda, NI * NJ * sizeof(DATA_TYPE), cudaMemcpyDeviceToHost);
 
 	FILE *fp;
 

@@ -231,7 +231,7 @@ void run(int argc, char** argv)
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
 
-    cudaMemcpy(result, gpuResult[final_ret], sizeof(int)*cols, cudaMemcpyDeviceToHost);
+    //cudaMemcpy(result, gpuResult[final_ret], sizeof(int)*cols, cudaMemcpyDeviceToHost);
 
 #ifdef BENCH_PRINT
     for (int i = 0; i < cols; i++)

@@ -349,7 +349,7 @@ void run(int argc, char** argv)
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
 
-    cudaMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float)*size, cudaMemcpyDeviceToHost);
+    //cudaMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float)*size, cudaMemcpyDeviceToHost);
 
     writeoutput(MatrixOut,grid_rows, grid_cols, ofile);
 
