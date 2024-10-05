@@ -318,7 +318,7 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
     cudaEventDestroy(stop);
 
     // --- Copy the result to host
-    //gpuErrchk(cudaMemcpy(h_shortestDistances, d_shortestDistances, sizeof(float) * graph->numVertices, cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaMemcpy(h_shortestDistances, d_shortestDistances, sizeof(float) * graph->numVertices, cudaMemcpyDeviceToHost));
 
     cudaFreeHost(h_finalizedVertices);
 

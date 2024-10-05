@@ -181,7 +181,7 @@ void runTest( int argc, char** argv)
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
 
-    //cudaMemcpy(output_itemsets, matrix_cuda, sizeof(int) * size, cudaMemcpyDeviceToHost);
+    cudaMemcpy(output_itemsets, matrix_cuda, sizeof(int) * size, cudaMemcpyDeviceToHost);
 	
 #define TRACEBACK
 #ifdef TRACEBACK

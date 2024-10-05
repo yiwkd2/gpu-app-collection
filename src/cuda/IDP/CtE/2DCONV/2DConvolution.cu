@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
     cudaMemset(B_cuda, 0, NI * NJ * sizeof(DATA_TYPE));
     cudaMemcpy(A_cuda, A, NI * NJ * sizeof(DATA_TYPE), cudaMemcpyHostToDevice);
 
-	convolution2DCuda(A_cuda, B_cuda);
+    convolution2DCuda(A_cuda, B_cuda);
 
     //cudaMemcpy(B, B_cuda, NI * NJ * sizeof(DATA_TYPE), cudaMemcpyDeviceToHost);
 
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
 
-    //cudaMemcpy(B, B_cuda, NI * NJ * sizeof(DATA_TYPE), cudaMemcpyDeviceToHost);
+    cudaMemcpy(B, B_cuda, NI * NJ * sizeof(DATA_TYPE), cudaMemcpyDeviceToHost);
 
 	FILE *fp;
 
