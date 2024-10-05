@@ -24,6 +24,7 @@ FILE* fapp_trace = fopen("app_trace.txt", "w");
 void reserve_gpu_memory() {
     void* dummy;
     uint64_t extra_malloc_size;
+    printf("(total malloc) %fMB\n", (float) total_malloc / 1024 / 1024);
     if (working_set_ratio > 100) {
         cudaMemGetInfo(&free_memory, &total_memory);
         extra_malloc_size = free_memory -
