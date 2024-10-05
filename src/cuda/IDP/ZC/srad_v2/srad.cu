@@ -55,8 +55,9 @@ runTest( int argc, char** argv)
 
 #ifdef GPU
 	
-	float *J_cuda;
-    float *C_cuda;
+	float *J_cuda, *J_tmp;
+    float *C_cuda, *C;
+    float *E, *W, *N, *S;
 	float *E_C, *W_C, *N_C, *S_C;
 
 #endif
@@ -85,13 +86,6 @@ runTest( int argc, char** argv)
     else{
 	usage(argc, argv);
     }
-
-
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
 
 	size_I = cols * rows;
     size_R = (r2-r1+1)*(c2-c1+1);   
@@ -131,14 +125,26 @@ runTest( int argc, char** argv)
 #endif
 
 #ifdef GPU
+    cudaMallocHost(&J_tmp, size_I * sizeof(float));
+    memset(J_tmp, 0, sizeof(float)* size_I);
+    cudaMallocHost((void**)& C, sizeof(float)* size_I);
+    memset(C, 0, sizeof(float)* size_I);
+	cudaMallocHost((void**)& E, sizeof(float)* size_I);
+    memset(E, 0, sizeof(float)* size_I);
+	cudaMallocHost((void**)& W, sizeof(float)* size_I);
+    memset(W, 0, sizeof(float)* size_I);
+	cudaMallocHost((void**)& S, sizeof(float)* size_I);
+    memset(S, 0, sizeof(float)* size_I);
+	cudaMallocHost((void**)& N, sizeof(float)* size_I);
+    memset(N, 0, sizeof(float)* size_I);
 
 	//Allocate device memory
-    cudaMalloc((void**)& J_cuda, sizeof(float)* size_I);
-    cudaMalloc((void**)& C_cuda, sizeof(float)* size_I);
-	cudaMalloc((void**)& E_C, sizeof(float)* size_I);
-	cudaMalloc((void**)& W_C, sizeof(float)* size_I);
-	cudaMalloc((void**)& S_C, sizeof(float)* size_I);
-	cudaMalloc((void**)& N_C, sizeof(float)* size_I);
+    cudaHostGetDevicePointer((void**)& J_cuda, J_tmp, 0);
+    cudaHostGetDevicePointer((void**)& C_cuda, C, 0);
+	cudaHostGetDevicePointer((void**)& E_C, E, 0);
+	cudaHostGetDevicePointer((void**)& W_C, W, 0);
+	cudaHostGetDevicePointer((void**)& S_C, S, 0);
+	cudaHostGetDevicePointer((void**)& N_C, N, 0);
 
 	
 #endif 
@@ -148,14 +154,29 @@ runTest( int argc, char** argv)
 	random_matrix(I, rows, cols);
 
     for (int k = 0;  k < size_I; k++ ) {
-     	J[k] = (float)exp(I[k]) ;
+     	J_tmp[k] = (float)exp(I[k]) ;
     }
-	printf("Start the SRAD main loop\n");
- for (iter=0; iter< niter; iter++){     
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
+    /*
+    cudaMemset(C_cuda, 0, sizeof(float)* size_I);
+    cudaMemset(E_C, 0, sizeof(float)* size_I);
+    cudaMemset(W_C, 0, sizeof(float)* size_I);
+    cudaMemset(S_C, 0, sizeof(float)* size_I);
+    cudaMemset(N_C, 0, sizeof(float)* size_I);
+    */
+
+	//printf("Start the SRAD main loop\n");
+ for (iter=0; iter< niter; iter++){
 		sum=0; sum2=0;
         for (int i=r1; i<=r2; i++) {
             for (int j=c1; j<=c2; j++) {
-                tmp   = J[i * cols + j];
+                tmp   = J_tmp[i * cols + j];
                 sum  += tmp ;
                 sum2 += tmp*tmp;
             }
@@ -228,21 +249,42 @@ runTest( int argc, char** argv)
     dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
 	dim3 dimGrid(block_x , block_y);
     
-
 	//Copy data from main memory to device memory
-	cudaMemcpy(J_cuda, J, sizeof(float) * size_I, cudaMemcpyHostToDevice);
+	//cudaMemcpy(J_cuda, J, sizeof(float) * size_I, cudaMemcpyHostToDevice);
+
+    /*
+    for (int k = 0;  k < size_I; k++ ) {
+     	J_tmp[k] = J[k];
+    }
+    */
 
 	//Run kernels
 	srad_cuda_1<<<dimGrid, dimBlock>>>(E_C, W_C, N_C, S_C, J_cuda, C_cuda, cols, rows, q0sqr); 
 	srad_cuda_2<<<dimGrid, dimBlock>>>(E_C, W_C, N_C, S_C, J_cuda, C_cuda, cols, rows, lambda, q0sqr); 
 
+    cudaDeviceSynchronize();
+
+    /*
+    for (int k = 0;  k < size_I; k++ ) {
+     	J_tmp[k] = J_tmp[k];
+    }
+    */
+
 	//Copy data from device memory to main memory
-    cudaMemcpy(J, J_cuda, sizeof(float) * size_I, cudaMemcpyDeviceToHost);
+    //cudaMemcpy(J, J_cuda, sizeof(float) * size_I, cudaMemcpyDeviceToHost);
 
 #endif   
 }
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+	
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
 
-    cudaThreadSynchronize();
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
 #define OUTPUT
 #ifdef OUTPUT
@@ -250,7 +292,7 @@ runTest( int argc, char** argv)
     printf("Printing Output:\n"); 
     for( int i = 0 ; i < rows ; i++){
     	for ( int j = 0 ; j < cols ; j++){
-        	printf("%.5f ", J[i * cols + j]); 
+        	printf("%.5f ", J_tmp[i * cols + j]); 
 	}	
    	printf("\n"); 
     }
@@ -272,19 +314,7 @@ runTest( int argc, char** argv)
 	cudaFree(N_C);
 	cudaFree(S_C);
 #endif 
-	free(c);
-
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-	
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-    printf("Elapsed Time: %fms\n", milliseconds);
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
-  
+	free(c);  
 }
 
 

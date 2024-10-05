@@ -250,11 +250,6 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
     int     *d_edgeArray;           gpuErrchk(cudaMalloc(&d_edgeArray,  sizeof(int)   * graph -> numEdges));
     float   *d_weightArray;         gpuErrchk(cudaMalloc(&d_weightArray,    sizeof(float) * graph -> numEdges));
 
-    // --- Copy adjacency-list to the device
-    gpuErrchk(cudaMemcpy(d_vertexArray, graph -> vertexArray, sizeof(int)   * graph -> numVertices, cudaMemcpyHostToDevice));
-    gpuErrchk(cudaMemcpy(d_edgeArray,   graph -> edgeArray,   sizeof(int)   * graph -> numEdges,    cudaMemcpyHostToDevice));
-    gpuErrchk(cudaMemcpy(d_weightArray, graph -> weightArray, sizeof(float) * graph -> numEdges,    cudaMemcpyHostToDevice));
-
     // --- Create mask array Ma, cost array Ca and updating cost array Ua of size V
     bool    *d_finalizedVertices;           gpuErrchk(cudaMalloc(&d_finalizedVertices,       sizeof(bool)   * graph->numVertices));
     float   *d_shortestDistances;           gpuErrchk(cudaMalloc(&d_shortestDistances,       sizeof(float) * graph->numVertices));
@@ -262,6 +257,20 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
 
     bool *h_finalizedVertices;
     cudaMallocHost(&h_finalizedVertices, sizeof(bool) * graph->numVertices);
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
+    cudaMemset(d_shortestDistances, 0, sizeof(float) * graph->numVertices);
+    cudaMemset(d_updatingShortestDistances, 0, sizeof(float) * graph->numVertices);
+
+    // --- Copy adjacency-list to the device
+    gpuErrchk(cudaMemcpy(d_vertexArray, graph -> vertexArray, sizeof(int)   * graph -> numVertices, cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemcpy(d_edgeArray,   graph -> edgeArray,   sizeof(int)   * graph -> numEdges,    cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemcpy(d_weightArray, graph -> weightArray, sizeof(float) * graph -> numEdges,    cudaMemcpyHostToDevice));
 
     // --- Initialize mask Ma to false, cost array Ca and Updating cost array Ua to \u221e
     initializeArrays <<<iDivUp(graph->numVertices, BLOCK_SIZE), BLOCK_SIZE >>>(d_finalizedVertices, d_shortestDistances,
@@ -295,6 +304,20 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
     }
 
     // --- Copy the result to host
+    //gpuErrchk(cudaMemcpy(h_shortestDistances, d_shortestDistances, sizeof(float) * graph->numVertices, cudaMemcpyDeviceToHost));
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+	
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+
+    // --- Copy the result to host
     gpuErrchk(cudaMemcpy(h_shortestDistances, d_shortestDistances, sizeof(float) * graph->numVertices, cudaMemcpyDeviceToHost));
 
     cudaFreeHost(h_finalizedVertices);
@@ -326,12 +349,6 @@ int main(int argc, char* argv[]) {
 
     // --- Source vertex
     int sourceVertex = 0;
-
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
 
     // --- Allocate memory for arrays
     GraphData graph;
@@ -390,17 +407,6 @@ int main(int argc, char* argv[]) {
 
     //free(h_shortestDistancesCPU);
     cudaFreeHost(h_shortestDistancesGPU);
-
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-	
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-    printf("Elapsed Time: %fms\n", milliseconds);
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
 
     return 0;
 }
