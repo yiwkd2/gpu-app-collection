@@ -48,8 +48,10 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   int m = 0;
   float *input_hidden_cuda;
   float *input_cuda;
+  float *output_hidden;
   float *output_hidden_cuda;
   float *partial_sum;
+  float *hidden_partial_sum_host;
   float *hidden_partial_sum;
   float *hidden_delta_cuda;
   float *input_prev_weights_cuda;
@@ -59,12 +61,6 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   num_blocks = in / 16;  
   dim3  grid( 1 , num_blocks);
   dim3  threads(16 , 16);
-
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
 
   // [USIM] USIM requires to allocate host memory using cudaMallocHost
   // So replace net->input_units and net->hidden_delta
@@ -88,6 +84,11 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   cudaMallocHost((void**) &input_weights_one_dim, (in + 1) * (hid + 1) * sizeof(float));
   cudaMallocHost((void**) &input_weights_prev_one_dim, (in + 1) * (hid + 1) * sizeof(float));
   cudaMallocHost((void**) &partial_sum, num_blocks * WIDTH * sizeof(float));
+  cudaMallocHost((void**) &output_hidden, (hid + 1) * sizeof(float));
+  memset(output_hidden, 0, (hid + 1) * sizeof(float));
+  cudaMallocHost((void**) &hidden_partial_sum_host, num_blocks * WIDTH * sizeof(float));
+  memset(hidden_partial_sum_host, 0, num_blocks * WIDTH * sizeof(float));
+
  
   // this preprocessing stage is added to correct the bugs of wrong memcopy using two-dimensional net->inputweights
   for (int k = 0; k <= in; k++) {	
@@ -98,11 +99,13 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
     }
   }
   
-  cudaMalloc((void**) &input_cuda, (in + 1) * sizeof(float));
-  cudaMalloc((void**) &output_hidden_cuda, (hid + 1) * sizeof(float));
-  cudaMalloc((void**) &input_hidden_cuda, (in + 1) * (hid + 1) * sizeof(float));
-  cudaMalloc((void**) &hidden_partial_sum, num_blocks * WIDTH * sizeof(float));
+  cudaHostGetDevicePointer((void**) &input_cuda, net->input_units, 0);
+  cudaHostGetDevicePointer((void**) &output_hidden_cuda, output_hidden, 0);
+  cudaHostGetDevicePointer((void**) &input_hidden_cuda, input_weights_one_dim, 0);
+  cudaHostGetDevicePointer((void**) &hidden_partial_sum, hidden_partial_sum_host, 0);
   
+  cudaHostGetDevicePointer((void**) &hidden_delta_cuda, net->hidden_delta, 0);
+  cudaHostGetDevicePointer((void**) &input_prev_weights_cuda, input_weights_prev_one_dim, 0);
   
 #endif
 
@@ -113,16 +116,26 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 
 #endif
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
 #ifdef GPU
  
   printf("Performing GPU computation\n");
   
   //printf("in= %d, hid = %d, numblocks = %d\n", in, hid, num_blocks);
   
+  /*
   cudaMemcpy(input_cuda, net->input_units, (in + 1) * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemset(output_hidden_cuda, 0, (hid + 1) * sizeof(float));
   cudaMemcpy(input_hidden_cuda, input_weights_one_dim, (in + 1) * (hid + 1) * sizeof(float), cudaMemcpyHostToDevice);
-
-  
+  cudaMemset(hidden_partial_sum, 0, num_blocks * WIDTH * sizeof(float));
+  cudaMemset(hidden_delta_cuda, 0, (hid + 1) * sizeof(float));
+  cudaMemset(input_prev_weights_cuda, 0, (in + 1) * (hid + 1) * sizeof(float));
+  */
   
   bpnn_layerforward_CUDA<<< grid, threads >>>(input_cuda,
 	                                          output_hidden_cuda,
@@ -131,7 +144,6 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 											  in,
 											  hid);
  
-  cudaThreadSynchronize();
   
   cudaError_t error = cudaGetLastError();
 	if (error != cudaSuccess) {
@@ -139,7 +151,9 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 		exit(EXIT_FAILURE);
 	}
   
+    /*
   cudaMemcpy(partial_sum, hidden_partial_sum, num_blocks * WIDTH * sizeof(float), cudaMemcpyDeviceToHost);
+  */
      
   for (int j = 1; j <= hid; j++) {
     sum = 0.0;
@@ -165,12 +179,9 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 
 #ifdef GPU
 
-  cudaMalloc((void**) &hidden_delta_cuda, (hid + 1) * sizeof(float));
-  cudaMalloc((void**) &input_prev_weights_cuda, (in + 1) * (hid + 1) * sizeof(float));
-
-  cudaMemcpy(hidden_delta_cuda, net->hidden_delta, (hid + 1) * sizeof(float), cudaMemcpyHostToDevice);
-  cudaMemcpy(input_prev_weights_cuda, input_weights_prev_one_dim, (in + 1) * (hid + 1) * sizeof(float), cudaMemcpyHostToDevice);
-  cudaMemcpy(input_hidden_cuda, input_weights_one_dim, (in + 1) * (hid + 1) * sizeof(float), cudaMemcpyHostToDevice);
+  //cudaMemcpy(hidden_delta_cuda, net->hidden_delta, (hid + 1) * sizeof(float), cudaMemcpyHostToDevice);
+  //cudaMemcpy(input_prev_weights_cuda, input_weights_prev_one_dim, (in + 1) * (hid + 1) * sizeof(float), cudaMemcpyHostToDevice);
+  //cudaMemcpy(input_hidden_cuda, input_weights_one_dim, (in + 1) * (hid + 1) * sizeof(float), cudaMemcpyHostToDevice);
 
 
   bpnn_adjust_weights_cuda<<< grid, threads >>>(hidden_delta_cuda,  
@@ -181,8 +192,22 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 												input_prev_weights_cuda
 												);
 
-  cudaMemcpy(net->input_units, input_cuda, (in + 1) * sizeof(float), cudaMemcpyDeviceToHost);
-  cudaMemcpy(input_weights_one_dim, input_hidden_cuda, (in + 1) * (hid + 1) * sizeof(float), cudaMemcpyDeviceToHost);
+  //cudaMemcpy(net->input_units, input_cuda, (in + 1) * sizeof(float), cudaMemcpyDeviceToHost);
+  //cudaMemcpy(input_weights_one_dim, input_hidden_cuda, (in + 1) * (hid + 1) * sizeof(float), cudaMemcpyDeviceToHost);
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+	
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+
+  //cudaMemcpy(net->input_units, input_cuda, (in + 1) * sizeof(float), cudaMemcpyDeviceToHost);
+  //cudaMemcpy(input_weights_one_dim, input_hidden_cuda, (in + 1) * (hid + 1) * sizeof(float), cudaMemcpyDeviceToHost);
 
   FILE* ofile = fopen("result.txt", "w");
   unsigned long long int checksum = 0; 
@@ -196,28 +221,18 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
    
 	printf("Result stored in result.txt\n");
 	
-
+    /*
   cudaFree(input_cuda);
   cudaFree(output_hidden_cuda);
   cudaFree(input_hidden_cuda);
   cudaFree(hidden_partial_sum);
   cudaFree(input_prev_weights_cuda);
   cudaFree(hidden_delta_cuda);
+  */
   
   cudaFreeHost(partial_sum);
   cudaFreeHost(input_weights_one_dim);
   cudaFreeHost(input_weights_prev_one_dim);
-
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-	
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-    printf("Elapsed Time: %fms\n", milliseconds);
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
 
   // [USIM] replace net->input_units and net->hidden_delta again...
   tmp_input = alloc_1d_dbl(in + 1);
