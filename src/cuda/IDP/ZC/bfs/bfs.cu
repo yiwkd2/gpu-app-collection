@@ -138,53 +138,48 @@ void BFSGraph( int argc, char** argv)
 
 	printf("Read File\n");
 
-    cudaEvent_t start_, stop_;
-    cudaEventCreate(&start_);
-    cudaEventCreate(&stop_);
-
-    cudaEventRecord(start_);
-
-	//Copy the Node list to device memory
-	Node* d_graph_nodes;
-	cudaMalloc( (void**) &d_graph_nodes, sizeof(Node)*no_of_nodes) ;
-	cudaMemcpy( d_graph_nodes, h_graph_nodes, sizeof(Node)*no_of_nodes, cudaMemcpyHostToDevice) ;
-
-	//Copy the Edge List to device Memory
-	int* d_graph_edges;
-	cudaMalloc( (void**) &d_graph_edges, sizeof(int)*edge_list_size) ;
-	cudaMemcpy( d_graph_edges, h_graph_edges, sizeof(int)*edge_list_size, cudaMemcpyHostToDevice) ;
-
-	//Copy the Mask to device memory
-	bool* d_graph_mask;
-	cudaMalloc( (void**) &d_graph_mask, sizeof(bool)*no_of_nodes) ;
-	cudaMemcpy( d_graph_mask, h_graph_mask, sizeof(bool)*no_of_nodes, cudaMemcpyHostToDevice) ;
-
-	bool* d_updating_graph_mask;
-	cudaMalloc( (void**) &d_updating_graph_mask, sizeof(bool)*no_of_nodes) ;
-	cudaMemcpy( d_updating_graph_mask, h_updating_graph_mask, sizeof(bool)*no_of_nodes, cudaMemcpyHostToDevice) ;
-
-	//Copy the Visited nodes array to device memory
-	bool* d_graph_visited;
-	cudaMalloc( (void**) &d_graph_visited, sizeof(bool)*no_of_nodes) ;
-	cudaMemcpy( d_graph_visited, h_graph_visited, sizeof(bool)*no_of_nodes, cudaMemcpyHostToDevice) ;
-
 	// allocate mem for the result on host side
 	int* h_cost;
     cudaMallocHost(&h_cost, sizeof(int)*no_of_nodes);
 	for(int i=0;i<no_of_nodes;i++)
 		h_cost[i]=-1;
 	h_cost[source]=0;
-	
-	// allocate device memory for result
+
+	bool* stop;
+    cudaMallocHost(&stop, sizeof(bool));
+
+	Node* d_graph_nodes;
+	int* d_graph_edges;
+	bool* d_graph_mask;
+	bool* d_updating_graph_mask;
+	bool* d_graph_visited;
 	int* d_cost;
-	cudaMalloc( (void**) &d_cost, sizeof(int)*no_of_nodes);
-	cudaMemcpy( d_cost, h_cost, sizeof(int)*no_of_nodes, cudaMemcpyHostToDevice) ;
-
-	//make a bool to check if the execution is over
 	bool *d_over;
-	cudaMalloc( (void**) &d_over, sizeof(bool));
 
-	printf("Copied Everything to GPU memory\n");
+	cudaHostGetDevicePointer( (void**) &d_graph_nodes, h_graph_nodes, 0);
+	cudaHostGetDevicePointer( (void**) &d_graph_edges, h_graph_edges, 0);
+	cudaHostGetDevicePointer( (void**) &d_graph_mask, h_graph_mask, 0);
+	cudaHostGetDevicePointer( (void**) &d_updating_graph_mask, h_updating_graph_mask, 0);
+	cudaHostGetDevicePointer( (void**) &d_graph_visited, h_graph_visited, 0);
+	cudaHostGetDevicePointer( (void**) &d_cost, h_cost, 0);
+	cudaHostGetDevicePointer( (void**) &d_over, stop, 0);
+
+    cudaEvent_t start_, stop_;
+    cudaEventCreate(&start_);
+    cudaEventCreate(&stop_);
+
+    cudaEventRecord(start_);
+
+    /*
+	cudaMemcpy( d_graph_nodes, h_graph_nodes, sizeof(Node)*no_of_nodes, cudaMemcpyHostToDevice) ;
+	cudaMemcpy( d_graph_edges, h_graph_edges, sizeof(int)*edge_list_size, cudaMemcpyHostToDevice) ;
+	cudaMemcpy( d_graph_mask, h_graph_mask, sizeof(bool)*no_of_nodes, cudaMemcpyHostToDevice) ;
+	cudaMemcpy( d_updating_graph_mask, h_updating_graph_mask, sizeof(bool)*no_of_nodes, cudaMemcpyHostToDevice) ;
+	cudaMemcpy( d_graph_visited, h_graph_visited, sizeof(bool)*no_of_nodes, cudaMemcpyHostToDevice) ;
+	cudaMemcpy( d_cost, h_cost, sizeof(int)*no_of_nodes, cudaMemcpyHostToDevice) ;
+    */
+
+	//printf("Copied Everything to GPU memory\n");
 
 	// setup execution parameters
 	dim3  grid( num_of_blocks, 1, 1);
@@ -192,14 +187,12 @@ void BFSGraph( int argc, char** argv)
 
 	int k=0;
 	printf("Start traversing the tree\n");
-	bool* stop;
-    cudaMallocHost(&stop, sizeof(bool));
 	//Call the Kernel untill all the elements of Frontier are not false
 	do
 	{
 		//if no thread changes this value then the loop stops
 		*stop=false;
-		cudaMemcpy( d_over, stop, sizeof(bool), cudaMemcpyHostToDevice) ;
+		//cudaMemcpy( d_over, stop, sizeof(bool), cudaMemcpyHostToDevice) ;
 		Kernel<<< grid, threads, 0 >>>( d_graph_nodes, d_graph_edges, d_graph_mask, d_updating_graph_mask, d_graph_visited, d_cost, no_of_nodes);
 		// check if kernel execution generated and error
 		
@@ -208,16 +201,32 @@ void BFSGraph( int argc, char** argv)
 		// check if kernel execution generated and error
 		
 
-		cudaMemcpy( stop, d_over, sizeof(bool), cudaMemcpyDeviceToHost) ;
+        cudaDeviceSynchronize();
+		//cudaMemcpy( stop, d_over, sizeof(bool), cudaMemcpyDeviceToHost) ;
 		k++;
 	}
 	while(*stop);
 
 
+
 	printf("Kernel Executed %d times\n",k);
 
 	// copy result from device to host
-	cudaMemcpy( h_cost, d_cost, sizeof(int)*no_of_nodes, cudaMemcpyDeviceToHost) ;
+	//cudaMemcpy( h_cost, d_cost, sizeof(int)*no_of_nodes, cudaMemcpyDeviceToHost) ;
+
+    cudaEventRecord(stop_);
+    cudaEventSynchronize(stop_);
+	
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start_, stop_);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start_);
+    cudaEventDestroy(stop_);
+
+	// copy result from device to host
+	//cudaMemcpy( h_cost, d_cost, sizeof(int)*no_of_nodes, cudaMemcpyDeviceToHost) ;
 
 	//Store the result into a file
 	FILE *fpo = fopen("result.txt","w");
@@ -235,22 +244,12 @@ void BFSGraph( int argc, char** argv)
 	cudaFreeHost( h_updating_graph_mask);
 	cudaFreeHost( h_graph_visited);
 	cudaFreeHost( h_cost);
+    /*
 	cudaFree(d_graph_nodes);
 	cudaFree(d_graph_edges);
 	cudaFree(d_graph_mask);
 	cudaFree(d_updating_graph_mask);
 	cudaFree(d_graph_visited);
 	cudaFree(d_cost);
-
-    cudaEventRecord(stop_);
-    cudaEventSynchronize(stop_);
-	
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start_, stop_);
-
-    printf("Elapsed Time: %fms\n", milliseconds);
-
-    cudaEventDestroy(start_);
-    cudaEventDestroy(stop_);
-
+    */
 }

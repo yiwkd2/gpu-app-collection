@@ -178,15 +178,23 @@ void fdtdCuda(DATA_TYPE* _fict_, DATA_TYPE* ex, DATA_TYPE* ey, DATA_TYPE* hz, DA
 	DATA_TYPE *ey_gpu;
 	DATA_TYPE *hz_gpu;
 
-	cudaMalloc((void **)&_fict_gpu, sizeof(DATA_TYPE) * tmax);
-	cudaMalloc((void **)&ex_gpu, sizeof(DATA_TYPE) * NX * (NY + 1));
-	cudaMalloc((void **)&ey_gpu, sizeof(DATA_TYPE) * (NX + 1) * NY);
-	cudaMalloc((void **)&hz_gpu, sizeof(DATA_TYPE) * NX * NY);
+	cudaHostGetDevicePointer((void **)&_fict_gpu, _fict_, 0);
+	cudaHostGetDevicePointer((void **)&ex_gpu, ex, 0);
+	cudaHostGetDevicePointer((void **)&ey_gpu, ey, 0);
+	cudaHostGetDevicePointer((void **)&hz_gpu, hz, 0);
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
+    /*
 	cudaMemcpy(_fict_gpu, _fict_, sizeof(DATA_TYPE) * tmax, cudaMemcpyHostToDevice);
 	cudaMemcpy(ex_gpu, ex, sizeof(DATA_TYPE) * NX * (NY + 1), cudaMemcpyHostToDevice);
 	cudaMemcpy(ey_gpu, ey, sizeof(DATA_TYPE) * (NX + 1) * NY, cudaMemcpyHostToDevice);
 	cudaMemcpy(hz_gpu, hz, sizeof(DATA_TYPE) * NX * NY, cudaMemcpyHostToDevice);
+    */
 
 	dim3 block(DIM_THREAD_BLOCK_X, DIM_THREAD_BLOCK_Y);
 	dim3 grid( (size_t)ceil(((float)NY) / ((float)block.x)), (size_t)ceil(((float)NX) / ((float)block.y)));
@@ -196,22 +204,37 @@ void fdtdCuda(DATA_TYPE* _fict_, DATA_TYPE* ex, DATA_TYPE* ey, DATA_TYPE* hz, DA
 	for(int t = 0; t< tmax; t++)
 	{
 		fdtd_step1_kernel<<<grid,block>>>(NX, NY, _fict_gpu, ex_gpu, ey_gpu, hz_gpu, t);
-		cudaThreadSynchronize();
+		cudaDeviceSynchronize();
 		fdtd_step2_kernel<<<grid,block>>>(NX, NY, ex_gpu, ey_gpu, hz_gpu, t);
-		cudaThreadSynchronize();
+		cudaDeviceSynchronize();
 		fdtd_step3_kernel<<<grid,block>>>(NX, NY, ex_gpu, ey_gpu, hz_gpu, t);
-		cudaThreadSynchronize();
+		cudaDeviceSynchronize();
 	}
 	
 	//t_end = rtclock();
     	//fprintf(stdout, "GPU Runtime: %0.6lfs\n", t_end - t_start);
 
-	cudaMemcpy(hz_outputFromGpu, hz_gpu, sizeof(DATA_TYPE) * NX * NY, cudaMemcpyDeviceToHost);	
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+	
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+
+	//cudaMemcpy(hz_outputFromGpu, hz_gpu, sizeof(DATA_TYPE) * NX * NY, cudaMemcpyDeviceToHost);
+    for (int i = 0; i < NX * NY; i++)
+        hz_outputFromGpu[i] = hz[i];
 		
+    /*
 	cudaFree(_fict_gpu);
 	cudaFree(ex_gpu);
 	cudaFree(ey_gpu);
 	cudaFree(hz_gpu);
+    */
 }
 
 
@@ -232,12 +255,6 @@ int main(int argc, char *argv[])
 	DATA_TYPE* hz;
 	DATA_TYPE* hz_outputFromGpu;
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-
     cudaMallocHost(&_fict_, tmax*sizeof(DATA_TYPE));
     cudaMallocHost(&ex, NX*(NY+1)*sizeof(DATA_TYPE));
     cudaMallocHost(&ey, (NX+1)*NY*sizeof(DATA_TYPE));
@@ -256,7 +273,6 @@ int main(int argc, char *argv[])
 	//fprintf(stdout, "CPU Runtime: %0.6lfs\n", t_end - t_start);
 	
 	//compareResults(hz, hz_outputFromGpu);
-
 	
 	FILE *fp;
 
@@ -275,17 +291,6 @@ int main(int argc, char *argv[])
 	cudaFreeHost(ey);
 	cudaFreeHost(hz);
 	cudaFreeHost(hz_outputFromGpu);
-
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-	
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-    printf("Elapsed Time: %fms\n", milliseconds);
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
 
 	return 0;
 }

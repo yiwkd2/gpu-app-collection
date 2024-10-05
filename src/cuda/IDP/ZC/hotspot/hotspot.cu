@@ -275,7 +275,7 @@ void run(int argc, char** argv)
 {
     int size;
     int grid_rows,grid_cols;
-    float *FilesavingTemp,*FilesavingPower,*MatrixOut; 
+    float *FilesavingTemp,*FilesavingPower,*MatrixOut,*MatrixTemp1; 
     char *tfile, *pfile, *ofile;
     
     int total_iterations = 60;
@@ -295,12 +295,6 @@ void run(int argc, char** argv)
 	
     size=grid_rows*grid_cols;
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-
     /* --------------- pyramid parameters --------------- */
     # define EXPAND_RATE 2// add one iteration will extend the pyramid base by 2 per each borderline
     int borderCols = (pyramid_height)*EXPAND_RATE/2;
@@ -313,6 +307,8 @@ void run(int argc, char** argv)
     cudaMallocHost(&FilesavingTemp, size*sizeof(float));
     cudaMallocHost(&FilesavingPower, size*sizeof(float));
     cudaMallocHost(&MatrixOut, size*sizeof(float));
+    cudaMallocHost(&MatrixTemp1, size*sizeof(float));
+    memset(MatrixTemp1, 0, size*sizeof(float));
 
     if( !FilesavingPower || !FilesavingTemp || !MatrixOut)
         fatal("unable to allocate memory");
@@ -324,26 +320,27 @@ void run(int argc, char** argv)
     readinput(FilesavingPower, grid_rows, grid_cols, pfile);
 
     float *MatrixTemp[2], *MatrixPower;
-    cudaMalloc((void**)&MatrixTemp[0], sizeof(float)*size);
-    cudaMalloc((void**)&MatrixTemp[1], sizeof(float)*size);
-    cudaMemcpy(MatrixTemp[0], FilesavingTemp, sizeof(float)*size, cudaMemcpyHostToDevice);
+    cudaHostGetDevicePointer((void**)&MatrixTemp[0], FilesavingTemp, 0);
+    cudaHostGetDevicePointer((void**)&MatrixTemp[1], MatrixTemp1, 0);
+    cudaHostGetDevicePointer((void**)&MatrixPower, FilesavingPower, 0);
 
-    cudaMalloc((void**)&MatrixPower, sizeof(float)*size);
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
+    /*
+    cudaMemcpy(MatrixTemp[0], FilesavingTemp, sizeof(float)*size, cudaMemcpyHostToDevice);
+    cudaMemset(MatrixTemp[1], 0, sizeof(float)*size);
     cudaMemcpy(MatrixPower, FilesavingPower, sizeof(float)*size, cudaMemcpyHostToDevice);
-    printf("Start computing the transient temperature\n");
+    */
+
+    //printf("Start computing the transient temperature\n");
     int ret = compute_tran_temp(MatrixPower,MatrixTemp,grid_cols,grid_rows, \
 	 total_iterations,pyramid_height, blockCols, blockRows, borderCols, borderRows);
-	printf("Ending simulation\n");
-    cudaMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float)*size, cudaMemcpyDeviceToHost);
-
-    writeoutput(MatrixOut,grid_rows, grid_cols, ofile);
-
-    cudaFree(MatrixPower);
-    cudaFree(MatrixTemp[0]);
-    cudaFree(MatrixTemp[1]);
-    cudaFreeHost(MatrixOut);
-    cudaFreeHost(FilesavingTemp);
-    cudaFreeHost(FilesavingPower);
+	//printf("Ending simulation\n");
+    //cudaMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float)*size, cudaMemcpyDeviceToHost);
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
@@ -355,4 +352,15 @@ void run(int argc, char** argv)
 
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
+
+    cudaMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float)*size, cudaMemcpyDeviceToHost);
+
+    writeoutput(MatrixOut,grid_rows, grid_cols, ofile);
+
+    cudaFree(MatrixPower);
+    cudaFree(MatrixTemp[0]);
+    cudaFree(MatrixTemp[1]);
+    cudaFreeHost(MatrixOut);
+    cudaFreeHost(FilesavingTemp);
+    cudaFreeHost(FilesavingPower);
 }

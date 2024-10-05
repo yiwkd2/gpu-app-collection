@@ -188,12 +188,6 @@ int main(int argc, char** argv)
 
 void run(int argc, char** argv)
 {
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-
     init(argc, argv);
 
     /* --------------- pyramid parameters --------------- */
@@ -207,18 +201,51 @@ void run(int argc, char** argv)
     int *gpuWall, *gpuResult[2];
     int size = rows*cols;
 
-    cudaMalloc((void**)&gpuResult[0], sizeof(int)*cols);
-    cudaMalloc((void**)&gpuResult[1], sizeof(int)*cols);
-    cudaMemcpy(gpuResult[0], data, sizeof(int)*cols, cudaMemcpyHostToDevice);
-    cudaMalloc((void**)&gpuWall, sizeof(int)*(size-cols));
-    cudaMemcpy(gpuWall, data+cols, sizeof(int)*(size-cols), cudaMemcpyHostToDevice);
+    int *gpuResult_h[2], *gpuWall_h;
 
+    cudaMallocHost(&gpuResult_h[0], sizeof(int)*cols);
+    for (int i = 0; i < cols; i++) gpuResult_h[0][i] = data[i];
+    cudaMallocHost(&gpuResult_h[1], sizeof(int)*cols);
+    memset(gpuResult_h[1], 0, sizeof(int)*cols);
+    cudaMallocHost(&gpuWall_h, sizeof(int)*(size - cols));
+    for (int i = cols; i < size; i++) gpuWall_h[i-cols] = data[i];
+
+
+    cudaHostGetDevicePointer((void**)&gpuResult[0], gpuResult_h[0], 0);
+    cudaHostGetDevicePointer((void**)&gpuResult[1], gpuResult_h[1], 0);
+    cudaHostGetDevicePointer((void**)&gpuWall, gpuWall_h, 0);
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
+    /*
+    cudaMemcpy(gpuResult[0], data, sizeof(int)*cols, cudaMemcpyHostToDevice);
+    cudaMemset(gpuResult[1], 0, sizeof(int)*cols);
+    cudaMemcpy(gpuWall, data+cols, sizeof(int)*(size-cols), cudaMemcpyHostToDevice);
+    */
 
     int final_ret = calc_path(gpuWall, gpuResult, rows, cols, \
 	 pyramid_height, blockCols, borderCols);
 
-    cudaMemcpy(result, gpuResult[final_ret], sizeof(int)*cols, cudaMemcpyDeviceToHost);
+    //cudaMemcpy(result, gpuResult[final_ret], sizeof(int)*cols, cudaMemcpyDeviceToHost);
+    cudaDeviceSynchronize();
 
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+	
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+    printf("Elapsed Time: %fms\n", milliseconds);
+
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+
+    //cudaMemcpy(result, gpuResult[final_ret], sizeof(int)*cols, cudaMemcpyDeviceToHost);
+    for (int i = 0; i < cols; i++) result[i] = gpuResult_h[final_ret][i];
 
 #ifdef BENCH_PRINT
     for (int i = 0; i < cols; i++)
@@ -237,16 +264,5 @@ void run(int argc, char** argv)
     cudaFreeHost(data);
     cudaFreeHost(wall);
     cudaFreeHost(result);
-
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-	
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-    printf("Elapsed Time: %fms\n", milliseconds);
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
 }
 
