@@ -246,17 +246,22 @@ __global__  void Kernel2(const int * __restrict__ vertexArray, const int * __res
 void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ h_shortestDistances) {
 
     // --- Create device-side adjacency-list, namely, vertex array Va, edge array Ea and weight array Wa from G(V,E,W)
-    int     *d_vertexArray;         gpuErrchk(cudaMalloc(&d_vertexArray,    sizeof(int)   * graph -> numVertices));
-    int     *d_edgeArray;           gpuErrchk(cudaMalloc(&d_edgeArray,  sizeof(int)   * graph -> numEdges));
-    float   *d_weightArray;         gpuErrchk(cudaMalloc(&d_weightArray,    sizeof(float) * graph -> numEdges));
-
-    // --- Create mask array Ma, cost array Ca and updating cost array Ua of size V
-    bool    *d_finalizedVertices;           gpuErrchk(cudaMalloc(&d_finalizedVertices,       sizeof(bool)   * graph->numVertices));
-    float   *d_shortestDistances;           gpuErrchk(cudaMalloc(&d_shortestDistances,       sizeof(float) * graph->numVertices));
-    float   *d_updatingShortestDistances;   gpuErrchk(cudaMalloc(&d_updatingShortestDistances, sizeof(float) * graph->numVertices));
+    int     *d_vertexArray;         gpuErrchk(cudaHostGetDevicePointer(&d_vertexArray, graph->vertexArray, 0));
+    int     *d_edgeArray;           gpuErrchk(cudaHostGetDevicePointer(&d_edgeArray, graph->edgeArray, 0));
+    float   *d_weightArray;         gpuErrchk(cudaHostGetDevicePointer(&d_weightArray, graph->weightArray, 0));
 
     bool *h_finalizedVertices;
+    float *h_updatingShortestDistances;
     cudaMallocHost(&h_finalizedVertices, sizeof(bool) * graph->numVertices);
+    cudaMallocHost(&h_updatingShortestDistances, sizeof(float) * graph->numVertices);
+    memset(h_updatingShortestDistances, 0, sizeof(float) * graph->numVertices);
+    memset(h_shortestDistances, 0, sizeof(float) * graph->numVertices);
+
+
+    // --- Create mask array Ma, cost array Ca and updating cost array Ua of size V
+    bool    *d_finalizedVertices;           gpuErrchk(cudaHostGetDevicePointer(&d_finalizedVertices, h_finalizedVertices, 0));
+    float   *d_shortestDistances;           gpuErrchk(cudaHostGetDevicePointer(&d_shortestDistances, h_shortestDistances, 0));
+    float   *d_updatingShortestDistances;   gpuErrchk(cudaHostGetDevicePointer(&d_updatingShortestDistances, h_updatingShortestDistances, 0));
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
@@ -264,13 +269,13 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
 
     cudaEventRecord(start);
 
-    cudaMemset(d_shortestDistances, 0, sizeof(float) * graph->numVertices);
-    cudaMemset(d_updatingShortestDistances, 0, sizeof(float) * graph->numVertices);
+    //cudaMemset(d_shortestDistances, 0, sizeof(float) * graph->numVertices);
+    //cudaMemset(d_updatingShortestDistances, 0, sizeof(float) * graph->numVertices);
 
     // --- Copy adjacency-list to the device
-    gpuErrchk(cudaMemcpy(d_vertexArray, graph -> vertexArray, sizeof(int)   * graph -> numVertices, cudaMemcpyHostToDevice));
-    gpuErrchk(cudaMemcpy(d_edgeArray,   graph -> edgeArray,   sizeof(int)   * graph -> numEdges,    cudaMemcpyHostToDevice));
-    gpuErrchk(cudaMemcpy(d_weightArray, graph -> weightArray, sizeof(float) * graph -> numEdges,    cudaMemcpyHostToDevice));
+    //gpuErrchk(cudaMemcpy(d_vertexArray, graph -> vertexArray, sizeof(int)   * graph -> numVertices, cudaMemcpyHostToDevice));
+    //gpuErrchk(cudaMemcpy(d_edgeArray,   graph -> edgeArray,   sizeof(int)   * graph -> numEdges,    cudaMemcpyHostToDevice));
+    //gpuErrchk(cudaMemcpy(d_weightArray, graph -> weightArray, sizeof(float) * graph -> numEdges,    cudaMemcpyHostToDevice));
 
     // --- Initialize mask Ma to false, cost array Ca and Updating cost array Ua to \u221e
     initializeArrays <<<iDivUp(graph->numVertices, BLOCK_SIZE), BLOCK_SIZE >>>(d_finalizedVertices, d_shortestDistances,
@@ -279,7 +284,7 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
     gpuErrchk(cudaDeviceSynchronize());
 
     // --- Read mask array from device -> host
-    gpuErrchk(cudaMemcpy(h_finalizedVertices, d_finalizedVertices, sizeof(bool) * graph->numVertices, cudaMemcpyDeviceToHost));
+    //gpuErrchk(cudaMemcpy(h_finalizedVertices, d_finalizedVertices, sizeof(bool) * graph->numVertices, cudaMemcpyDeviceToHost));
 
     int iteration = 0;
     while (!allFinalizedVertices(h_finalizedVertices, graph->numVertices) && iteration < MAX_ITERATION) {
@@ -300,7 +305,7 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
 	    iteration++;
         }
 
-        gpuErrchk(cudaMemcpy(h_finalizedVertices, d_finalizedVertices, sizeof(bool) * graph->numVertices, cudaMemcpyDeviceToHost));
+        //gpuErrchk(cudaMemcpy(h_finalizedVertices, d_finalizedVertices, sizeof(bool) * graph->numVertices, cudaMemcpyDeviceToHost));
     }
 
     // --- Copy the result to host
@@ -318,16 +323,18 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
     cudaEventDestroy(stop);
 
     // --- Copy the result to host
-    gpuErrchk(cudaMemcpy(h_shortestDistances, d_shortestDistances, sizeof(float) * graph->numVertices, cudaMemcpyDeviceToHost));
+    //gpuErrchk(cudaMemcpy(h_shortestDistances, d_shortestDistances, sizeof(float) * graph->numVertices, cudaMemcpyDeviceToHost));
 
     cudaFreeHost(h_finalizedVertices);
 
+    /*
     gpuErrchk(cudaFree(d_vertexArray));
     gpuErrchk(cudaFree(d_edgeArray));
     gpuErrchk(cudaFree(d_weightArray));
     gpuErrchk(cudaFree(d_finalizedVertices));
     gpuErrchk(cudaFree(d_shortestDistances));
     gpuErrchk(cudaFree(d_updatingShortestDistances));
+    */
 }
 
 /****************/
