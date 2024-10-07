@@ -71,6 +71,15 @@ IDP:
 	cp cuda/IDP/CDP/pathfinder/pathfinder_CDP_hw $(BINDIR)/$(BINSUBDIR)/pathfinder_CDP_hw
 	cp cuda/IDP/CDP/srad_v2/srad_CDP_hw $(BINDIR)/$(BINSUBDIR)/srad_CDP_hw
 	cp cuda/IDP/CDP/sssp/sssp_CDP_hw $(BINDIR)/$(BINSUBDIR)/sssp_CDP_hw
+	cp cuda/IDP/CDP/2DCONV/2dconv_CDP_hw $(BINDIR)/$(BINSUBDIR)/2dconv_CDP_prefetch_hw
+	cp cuda/IDP/CDP/backprop/backprop_CDP_hw $(BINDIR)/$(BINSUBDIR)/backprop_CDP_prefetch_hw
+	cp cuda/IDP/CDP/bfs/bfs_CDP_hw $(BINDIR)/$(BINSUBDIR)/bfs_CDP_prefetch_hw
+	cp cuda/IDP/CDP/FDTD-2D/fdtd2d_CDP_hw $(BINDIR)/$(BINSUBDIR)/fdtd2d_CDP_prefetch_hw
+	cp cuda/IDP/CDP/hotspot/hotspot_CDP_hw $(BINDIR)/$(BINSUBDIR)/hotspot_CDP_prefetch_hw
+	cp cuda/IDP/CDP/nw/nw_CDP_hw $(BINDIR)/$(BINSUBDIR)/nw_CDP_prefetch_hw
+	cp cuda/IDP/CDP/pathfinder/pathfinder_CDP_hw $(BINDIR)/$(BINSUBDIR)/pathfinder_CDP_prefetch_hw
+	cp cuda/IDP/CDP/srad_v2/srad_CDP_hw $(BINDIR)/$(BINSUBDIR)/srad_CDP_prefetch_hw
+	cp cuda/IDP/CDP/sssp/sssp_CDP_hw $(BINDIR)/$(BINSUBDIR)/sssp_CDP_prefetch_hw
 	cp cuda/IDP/IDP/AddVectors/add_vectors_IDP $(BINDIR)/$(BINSUBDIR)/add_vectors_IDP
 	cp cuda/IDP/IDP/2DCONV/2dconv_IDP $(BINDIR)/$(BINSUBDIR)/2dconv_IDP
 	cp cuda/IDP/IDP/backprop/backprop_IDP $(BINDIR)/$(BINSUBDIR)/backprop_IDP

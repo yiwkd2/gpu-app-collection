@@ -232,26 +232,15 @@ int compute_tran_temp(float *MatrixPower,float *MatrixTemp[2], int col, int row,
 	time_elapsed=0.001;
 
         int src = 1, dst = 0;
-	
-#ifdef PREF
-	cudaStream_t stream3;
-    	cudaStreamCreate(&stream3);
-#endif
 
 	for (t = 0; t < total_iterations; t+=num_iterations) {
             int temp = src;
             src = dst;
             dst = temp;
 
-	    
-#ifdef PREF
-            calculate_temp<<<dimGrid, dimBlock, 0, stream3>>>(MIN(num_iterations, total_iterations-t), MatrixPower,MatrixTemp[src],MatrixTemp[dst],\
-		col,row,borderCols, borderRows, Cap,Rx,Ry,Rz,step,time_elapsed);
-#else
 	    calculate_temp<<<dimGrid, dimBlock>>>(MIN(num_iterations, total_iterations-t), MatrixPower,MatrixTemp[src],MatrixTemp[dst],\
 		col,row,borderCols, borderRows, Cap,Rx,Ry,Rz,step,time_elapsed);
         cudaDeviceSynchronize();
-#endif
 	}
         return dst;
 }
@@ -338,25 +327,17 @@ void run(int argc, char** argv)
     readinput(MatrixTemp[0], grid_rows, grid_cols, tfile);
     readinput(MatrixPower, grid_rows, grid_cols, pfile);
 
-#ifdef PREF
-    int device = -1;
-    cudaGetDevice(&device);
-
-    cudaStream_t stream1;
-    cudaStreamCreate(&stream1);
-
-    cudaStream_t stream2;
-    cudaStreamCreate(&stream2);
-
-    cudaMemPrefetchAsync( MatrixTemp[0], sizeof(float)*size, device, stream1);
-    cudaMemPrefetchAsync( MatrixPower, sizeof(float)*size, device, stream2);
-#endif
-
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
     cudaEventRecord(start);
+
+#ifdef PREFETCH
+    cudaMemPrefetchAsync(MatrixTemp[0], sizeof(float)*size, 0, 0);
+    cudaMemPrefetchAsync(MatrixTemp[1], sizeof(float)*size, 0, 0);
+    cudaMemPrefetchAsync(MatrixPower, sizeof(float)*size, 0, 0);
+#endif
 
     //printf("Start computing the transient temperature\n");
     int ret = compute_tran_temp(MatrixPower,MatrixTemp,grid_cols,grid_rows, \

@@ -125,15 +125,16 @@ runTest( int argc, char** argv)
 
     cudaEventRecord(start);
 
+#ifdef PREFETCH
+    cudaMemPrefetchAsync(C_cuda, sizeof(float)* size_I, 0, 0);
+    cudaMemPrefetchAsync(E_C, sizeof(float)* size_I, 0, 0);
+    cudaMemPrefetchAsync(W_C, sizeof(float)* size_I, 0, 0);
+    cudaMemPrefetchAsync(S_C, sizeof(float)* size_I, 0, 0);
+    cudaMemPrefetchAsync(N_C, sizeof(float)* size_I, 0, 0);
+#endif
+
 	//printf("Start the SRAD main loop\n");
 
-#ifdef PREF
-	cudaStream_t stream1;
-	cudaStreamCreate(&stream1);
-
-	cudaStream_t stream2;
-	cudaStreamCreate(&stream2);
-#endif
 	for (iter=0; iter< niter; iter++) {     
 		sum=0; sum2=0;
         	for (int i=r1; i<=r2; i++) {
@@ -148,11 +149,10 @@ runTest( int argc, char** argv)
         	varROI  = (sum2 / size_R) - meanROI*meanROI;
         	q0sqr   = varROI / (meanROI*meanROI);
 
-#ifdef PREF
-		int device = -1;
-		cudaGetDevice(&device);
-		cudaMemPrefetchAsync(J_shared, sizeof(float)* size_I, device, stream1);
+#ifdef PREFETCH
+		cudaMemPrefetchAsync(J_shared, sizeof(float)* size_I, 0, 0);
 #endif
+
 		//Currently the input size must be divided by 16 - the block size
 		int block_x = cols/BLOCK_SIZE ;
     		int block_y = rows/BLOCK_SIZE ;
@@ -161,14 +161,9 @@ runTest( int argc, char** argv)
 		dim3 dimGrid(block_x , block_y);
 
 		//Run kernels
-#ifdef PREF
-		srad_cuda_1<<<dimGrid, dimBlock, 0, stream2>>>(E_C, W_C, N_C, S_C, J_shared, C_cuda, cols, rows, q0sqr); 
-		srad_cuda_2<<<dimGrid, dimBlock, 0, stream2>>>(E_C, W_C, N_C, S_C, J_shared, C_cuda, cols, rows, lambda, q0sqr); 
-#else
 		srad_cuda_1<<<dimGrid, dimBlock>>>(E_C, W_C, N_C, S_C, J_shared, C_cuda, cols, rows, q0sqr); 
 		srad_cuda_2<<<dimGrid, dimBlock>>>(E_C, W_C, N_C, S_C, J_shared, C_cuda, cols, rows, lambda, q0sqr); 
 		cudaDeviceSynchronize();
-#endif
 	}
 
     /*

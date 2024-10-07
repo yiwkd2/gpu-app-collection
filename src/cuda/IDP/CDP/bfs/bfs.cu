@@ -183,39 +183,6 @@ void BFSGraph( int argc, char** argv)
 
 	printf("Copied Everything to GPU memory\n");
 
-#ifdef PREF
-	int device = -1;
-	cudaGetDevice(&device);
-
-	cudaStream_t stream1;
-	cudaStreamCreate(&stream1);
-
-	cudaStream_t stream2;
-	cudaStreamCreate(&stream2);
-
-	cudaStream_t stream3;
-	cudaStreamCreate(&stream3);
-
-	cudaStream_t stream4;
-	cudaStreamCreate(&stream4);
-
-	cudaStream_t stream5;
-	cudaStreamCreate(&stream5);
-
-	cudaStream_t stream6;
-	cudaStreamCreate(&stream6);
-
-	cudaStream_t stream7;
-	cudaStreamCreate(&stream7);
-
-	cudaMemPrefetchAsync( graph_nodes, sizeof(Node)*no_of_nodes, device, stream1);
-	cudaMemPrefetchAsync( graph_edges, sizeof(int)*edge_list_size, device, stream2);
-	cudaMemPrefetchAsync( graph_mask, sizeof(bool)*no_of_nodes, device, stream3);
-	cudaMemPrefetchAsync( updating_graph_mask, sizeof(bool)*no_of_nodes, device, stream4);
-	cudaMemPrefetchAsync( graph_visited, sizeof(bool)*no_of_nodes, device, stream5);
-	cudaMemPrefetchAsync( cost, sizeof(int)*no_of_nodes, device, stream6);
-#endif
-
 	// setup execution parameters
 	dim3  grid( num_of_blocks, 1, 1);
 	dim3  threads( num_of_threads_per_block, 1, 1);
@@ -232,6 +199,15 @@ void BFSGraph( int argc, char** argv)
 
     cudaEventRecord(start_);
 
+#ifdef PREFETCH
+	cudaMemPrefetchAsync(graph_nodes, sizeof(Node)*no_of_nodes, 0, 0);
+	cudaMemPrefetchAsync(graph_edges, sizeof(int)*edge_list_size, 0, 0);
+	cudaMemPrefetchAsync(graph_mask, sizeof(bool)*no_of_nodes, 0, 0);
+	cudaMemPrefetchAsync(updating_graph_mask, sizeof(bool)*no_of_nodes, 0, 0);
+	cudaMemPrefetchAsync(graph_visited, sizeof(bool)*no_of_nodes, 0, 0);
+	cudaMemPrefetchAsync(cost, sizeof(int)*no_of_nodes, 0, 0);
+#endif
+
 	//Call the Kernel untill all the elements of Frontier are not false
 	do
 	{
@@ -239,20 +215,11 @@ void BFSGraph( int argc, char** argv)
         *stop=false;
         cudaMemcpy( d_over, stop, sizeof(bool), cudaMemcpyHostToDevice) ;
 
-#ifdef PREF
-		Kernel<<< grid, threads, 0, stream7>>>( graph_nodes, graph_edges, graph_mask, updating_graph_mask, graph_visited, cost, no_of_nodes);
-		// check if kernel execution generated and error
-		
-
-		Kernel2<<< grid, threads, 0, stream7>>>( graph_mask, updating_graph_mask, graph_visited, d_over, no_of_nodes);
-		// check if kernel execution generated and error
-#else
 		Kernel<<< grid, threads, 0 >>>( graph_nodes, graph_edges, graph_mask, updating_graph_mask, graph_visited, cost, no_of_nodes);
 		// check if kernel execution generated and error
 
 		Kernel2<<< grid, threads, 0 >>>( graph_mask, updating_graph_mask, graph_visited, d_over, no_of_nodes);
 		// check if kernel execution generated and error
-#endif		
 
         cudaMemcpy( stop, d_over, sizeof(bool), cudaMemcpyDeviceToHost) ;
 		k++;

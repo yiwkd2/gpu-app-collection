@@ -583,32 +583,6 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   
 #endif
 
-#ifdef PREF
-  // Prefetch the data to the GPU
-  int device = -1;
-  cudaGetDevice(&device);
-
-  cudaStream_t stream1;
-  cudaStreamCreate(&stream1);
-
-  cudaStream_t stream2;
-  cudaStreamCreate(&stream2);
-
-  cudaStream_t stream3;
-  cudaStreamCreate(&stream3);
-
-  cudaStream_t stream4;
-  cudaStreamCreate(&stream4);
-
-  cudaStream_t stream5;
-  cudaStreamCreate(&stream5);
-
-  cudaStream_t stream6;
-  cudaStreamCreate(&stream6);
-
-  cudaMemPrefetchAsync(net->input_units, (in + 1) * sizeof(float), device, stream1);
-  cudaMemPrefetchAsync(net->input_weights,(in + 1) * (hid + 1) * sizeof(float), device, stream2);
-#endif
 
 #ifdef CPU
 
@@ -626,23 +600,20 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   cudaEventCreate(&stop);
 
   cudaEventRecord(start);
-  
 
-#ifdef PREF
-  bpnn_layerforward_CUDA<<< grid, threads, 0, stream2 >>>(net->input_units,
-					      output_hidden_cuda,
-					      net->input_weights,
-					      hidden_partial_sum,
-					      in,
-					      hid);
-#else  
+#ifdef PREFETCH
+  cudaMemPrefetchAsync(net->input_units, (in + 1) * sizeof(float), 0, 0);
+  cudaMemPrefetchAsync(output_hidden_cuda, (hid + 1) * sizeof(float), 0, 0);
+  cudaMemPrefetchAsync(net->input_weights, (in + 1) * (hid + 1) * sizeof(float), 0, 0);
+  cudaMemPrefetchAsync(hidden_partial_sum, num_blocks * WIDTH * sizeof(float), 0, 0);
+#endif
+
   bpnn_layerforward_CUDA<<< grid, threads >>>(net->input_units,
 					      output_hidden_cuda,
 					      net->input_weights,
 					      hidden_partial_sum,
 					      in,
 					      hid);
-#endif
   
   cudaDeviceSynchronize();
   cudaError_t error = cudaGetLastError();
@@ -676,26 +647,14 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 
 #endif  
 
-#ifdef PREF
-  // Prefetch the data to the GPU
-  cudaGetDevice(&device);
-  cudaMemPrefetchAsync(net->hidden_delta, (hid + 1) * sizeof(float), device, stream3);
-  cudaMemPrefetchAsync(net->input_prev_weights,(in + 1) * (hid + 1) * sizeof(float), device, stream4);
-  cudaMemPrefetchAsync(net->input_weights2, (in + 1) * (hid + 1) * sizeof(float), device, stream5);
-#endif
-
 
 #ifdef GPU
+#ifdef PREFETCH
+  cudaMemPrefetchAsync(net->hidden_delta, (hid + 1) * sizeof(float), 0, 0);
+  cudaMemPrefetchAsync(net->input_weights2, (in + 1) * (hid + 1) * sizeof(float), 0, 0);
+  cudaMemPrefetchAsync(net->input_prev_weights, (in + 1) * (hid + 1) * sizeof(float), 0, 0);
+#endif
 
-#ifdef PREF
-  bpnn_adjust_weights_cuda<<< grid, threads, 0, stream6>>>(net->hidden_delta,  
-						hid, 
-						net->input_units, 
-						in,
-						net->input_weights2, 
-						net->input_prev_weights
-						);
-#else
   bpnn_adjust_weights_cuda<<< grid, threads >>>(net->hidden_delta,  
 						hid, 
 						net->input_units, 
@@ -703,7 +662,6 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 						net->input_weights2, 
 						net->input_prev_weights
 						);
-#endif
 
   cudaDeviceSynchronize();
 

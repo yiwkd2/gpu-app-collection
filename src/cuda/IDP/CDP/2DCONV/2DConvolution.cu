@@ -112,6 +112,11 @@ int main(int argc, char *argv[])
 
     cudaEventRecord(start);
 
+#ifdef PREFETCH
+    cudaMemPrefetchAsync(A, NI * NJ * sizeof(DATA_TYPE), 0, 0);
+    cudaMemPrefetchAsync(B, NI * NJ * sizeof(DATA_TYPE), 0, 0);
+#endif
+
 	convolution2DCuda(A, B);
 
     /*

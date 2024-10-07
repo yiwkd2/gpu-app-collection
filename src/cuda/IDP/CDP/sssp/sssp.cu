@@ -292,6 +292,11 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
 
     cudaEventRecord(start);
 
+#ifdef PREFETCH
+    cudaMemPrefetchAsync(h_shortestDistances, sizeof(float) * graph->numVertices, 0, 0);
+    cudaMemPrefetchAsync(d_updatingShortestDistances, sizeof(float) * graph->numVertices, 0, 0);
+#endif
+
     // --- Initialize mask Ma to false, cost array Ca and Updating cost array Ua to \u221e
     initializeArrays <<<iDivUp(graph->numVertices, BLOCK_SIZE), BLOCK_SIZE >>>(d_finalizedVertices, h_shortestDistances,
                                                             d_updatingShortestDistances, sourceVertex, graph -> numVertices);
@@ -300,6 +305,12 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
 
     // --- Read mask array from device -> host
     gpuErrchk(cudaMemcpy(h_finalizedVertices, d_finalizedVertices, sizeof(bool) * graph->numVertices, cudaMemcpyDeviceToHost));
+
+#ifdef PREFETCH
+    cudaMemPrefetchAsync(graph->vertexArray, sizeof(float) * graph->numVertices, 0, 0);
+    cudaMemPrefetchAsync(graph->edgeArray, sizeof(float) * graph->numVertices, 0, 0);
+    cudaMemPrefetchAsync(graph->weightArray, sizeof(float) * graph->numVertices, 0, 0);
+#endif
 
     int iteration = 0;
     while (!allFinalizedVertices(h_finalizedVertices, graph->numVertices) && iteration < MAX_ITERATION) {

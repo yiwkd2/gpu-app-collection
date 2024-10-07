@@ -191,6 +191,13 @@ void fdtdCuda(DATA_TYPE* _fict_, DATA_TYPE* ex, DATA_TYPE* ey, DATA_TYPE* hz)//,
 	cudaMemcpy(ey_gpu, ey, sizeof(DATA_TYPE) * (NX + 1) * NY, cudaMemcpyHostToDevice);
 	cudaMemcpy(hz_gpu, hz, sizeof(DATA_TYPE) * NX * NY, cudaMemcpyHostToDevice);
 */
+#ifdef PREFETCH
+    cudaMemPrefetchAsync(_fict_, tmax*sizeof(DATA_TYPE), 0, 0);
+	cudaMemPrefetchAsync(ex, NX*(NY+1)*sizeof(DATA_TYPE), 0, 0);
+	cudaMemPrefetchAsync(ey, (NX+1)*NY*sizeof(DATA_TYPE), 0, 0);
+	cudaMemPrefetchAsync(hz, NX*NY*sizeof(DATA_TYPE), 0, 0);
+#endif
+
 	dim3 block(DIM_THREAD_BLOCK_X, DIM_THREAD_BLOCK_Y);
 	dim3 grid( (size_t)ceil(((float)NY) / ((float)block.x)), (size_t)ceil(((float)NX) / ((float)block.y)));
 
