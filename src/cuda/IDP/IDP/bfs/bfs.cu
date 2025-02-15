@@ -237,12 +237,12 @@ void BFSGraph( int argc, char** argv)
     bool *stop;	
     cudaMallocHost((void**) &stop, sizeof(bool));
 
-    cudaMakeManagedByDevice(graph_nodes);
-    cudaMakeManagedByDevice(graph_mask);
-    cudaMakeManagedByDevice(updating_graph_mask);
-    cudaMakeManagedByDevice(graph_visited);
-    cudaMakeManagedByDevice(graph_edges);
-    cudaMakeManagedByDevice(cost);
+    cudaMakeManagedByDevice(graph_nodes, 1);
+    cudaMakeManagedByDevice(graph_mask, 0);
+    cudaMakeManagedByDevice(updating_graph_mask, 0);
+    cudaMakeManagedByDevice(graph_visited, 0);
+    cudaMakeManagedByDevice(graph_edges, 1);
+    cudaMakeManagedByDevice(cost, 0);
 
     cudaEvent_t start_, stop_;
     cudaEventCreate(&start_);

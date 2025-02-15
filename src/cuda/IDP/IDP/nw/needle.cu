@@ -174,8 +174,8 @@ void runTest( int argc, char** argv)
 	dim3 dimBlock(BLOCK_SIZE, 1);
 	int block_width = ( max_cols - 1 )/BLOCK_SIZE;
 
-    cudaMakeManagedByDevice(referrence);
-    cudaMakeManagedByDevice(itemsets);
+    cudaMakeManagedByDevice(referrence, 1);
+    cudaMakeManagedByDevice(itemsets, 0);
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);

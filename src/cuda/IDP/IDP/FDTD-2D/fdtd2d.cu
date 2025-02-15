@@ -268,10 +268,10 @@ int main(int argc, char *argv[])
 
 	init_arrays(_fict_, ex, ey, hz);
 
-    cudaMakeManagedByDevice(_fict_);
-    cudaMakeManagedByDevice(ex);
-    cudaMakeManagedByDevice(ey);
-    cudaMakeManagedByDevice(hz);
+    cudaMakeManagedByDevice(_fict_, 1);
+    cudaMakeManagedByDevice(ex, 0);
+    cudaMakeManagedByDevice(ey, 0);
+    cudaMakeManagedByDevice(hz, 0);
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);

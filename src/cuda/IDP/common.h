@@ -6,8 +6,8 @@
 
 #ifdef USIM
 #define HOST_ACCESS(access_type, vaddr) cudaIpcGetMemHandle(access_type, vaddr)
-#define cudaMakeManagedByDevice(vaddr) cudaIpcGetMemHandle((cudaIpcMemHandle_t*) 2, vaddr)
-#define MEM_TEST() cudaIpcGetMemHandle((cudaIpcMemHandle_t*) 3, 0)
+#define cudaMakeManagedByDevice(vaddr, is_read_only) cudaIpcGetMemHandle((cudaIpcMemHandle_t*) (2 + is_read_only), vaddr)
+#define MEM_TEST() cudaIpcGetMemHandle((cudaIpcMemHandle_t*) 4, 0)
 #else
 #define INIT() do {} while (0)
 #define HOST_ACCESS(...) do {} while (0)

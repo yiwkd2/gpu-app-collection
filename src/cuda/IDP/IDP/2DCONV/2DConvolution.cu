@@ -107,8 +107,8 @@ int main(int argc, char *argv[])
 	//initialize the arrays
 	init(A);
 
-    cudaMakeManagedByDevice(A);
-    cudaMakeManagedByDevice(B);
+    cudaMakeManagedByDevice(A, 1);
+    cudaMakeManagedByDevice(B, 0);
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);

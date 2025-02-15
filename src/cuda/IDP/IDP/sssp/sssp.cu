@@ -288,11 +288,11 @@ void dijkstraGPU(GraphData *graph, const int sourceVertex, float * __restrict__ 
     bool *h_finalizedVertices;
     cudaMallocHost((void**) &h_finalizedVertices, sizeof(bool) * graph->numVertices);
 
-    cudaMakeManagedByDevice(d_updatingShortestDistances);
-    cudaMakeManagedByDevice(graph->vertexArray);
-    cudaMakeManagedByDevice(graph->edgeArray);
-    cudaMakeManagedByDevice(graph->weightArray);
-    cudaMakeManagedByDevice(h_shortestDistances);
+    cudaMakeManagedByDevice(d_updatingShortestDistances, 0);
+    cudaMakeManagedByDevice(graph->vertexArray, 1);
+    cudaMakeManagedByDevice(graph->edgeArray, 1);
+    cudaMakeManagedByDevice(graph->weightArray, 1);
+    cudaMakeManagedByDevice(h_shortestDistances, 0);
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);

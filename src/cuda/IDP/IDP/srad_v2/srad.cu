@@ -120,12 +120,12 @@ runTest( int argc, char** argv)
         HOST_ACCESS(WRITE, &J_shared[k]);
     }
 
-    cudaMakeManagedByDevice(C_cuda);
-    cudaMakeManagedByDevice(E_C);
-    cudaMakeManagedByDevice(W_C);
-    cudaMakeManagedByDevice(S_C);
-    cudaMakeManagedByDevice(N_C);
-    cudaMakeManagedByDevice(J_shared);
+    cudaMakeManagedByDevice(C_cuda, 0);
+    cudaMakeManagedByDevice(E_C, 0);
+    cudaMakeManagedByDevice(W_C, 0);
+    cudaMakeManagedByDevice(S_C, 0);
+    cudaMakeManagedByDevice(N_C, 0);
+    cudaMakeManagedByDevice(J_shared, 0);
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);

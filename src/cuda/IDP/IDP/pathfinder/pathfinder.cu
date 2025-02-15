@@ -249,9 +249,9 @@ void run(int argc, char** argv)
     cudaMemPrefetchAsync( gpuWall, sizeof(int)*(size-cols), DEVICE, stream2);
 #endif
 
-    cudaMakeManagedByDevice(gpuResult[0]);
-    cudaMakeManagedByDevice(gpuResult[1]);
-    cudaMakeManagedByDevice(gpuWall);
+    cudaMakeManagedByDevice(gpuResult[0], 0);
+    cudaMakeManagedByDevice(gpuResult[1], 0);
+    cudaMakeManagedByDevice(gpuWall, 1);
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);

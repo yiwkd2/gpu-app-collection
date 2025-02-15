@@ -625,19 +625,19 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 #ifdef GPU
  
   //printf("Performing GPU computation\n");
-  cudaMakeManagedByDevice(output_hidden_cuda);
-  cudaMakeManagedByDevice(hidden_partial_sum);
-  cudaMakeManagedByDevice(net->input_units);
-  cudaMakeManagedByDevice(net->hidden_units);
-  cudaMakeManagedByDevice(net->output_units);
-  cudaMakeManagedByDevice(net->hidden_delta);
-  cudaMakeManagedByDevice(net->output_delta);
-  cudaMakeManagedByDevice(net->target);
-  cudaMakeManagedByDevice(net->input_weights);
-  cudaMakeManagedByDevice(net->input_weights2);
-  cudaMakeManagedByDevice(net->hidden_weights);
-  cudaMakeManagedByDevice(net->input_prev_weights);
-  cudaMakeManagedByDevice(net->hidden_prev_weights);
+  cudaMakeManagedByDevice(output_hidden_cuda, 1);
+  cudaMakeManagedByDevice(hidden_partial_sum, 0);
+  cudaMakeManagedByDevice(net->input_units, 1);
+  cudaMakeManagedByDevice(net->hidden_units, 0);
+  cudaMakeManagedByDevice(net->output_units, 0);
+  cudaMakeManagedByDevice(net->hidden_delta, 0);
+  cudaMakeManagedByDevice(net->output_delta, 0);
+  cudaMakeManagedByDevice(net->target, 0);
+  cudaMakeManagedByDevice(net->input_weights, 0);
+  cudaMakeManagedByDevice(net->input_weights2, 0);
+  cudaMakeManagedByDevice(net->hidden_weights, 0);
+  cudaMakeManagedByDevice(net->input_prev_weights, 0);
+  cudaMakeManagedByDevice(net->hidden_prev_weights, 0);
   
   cudaEvent_t start, stop;
   cudaEventCreate(&start);

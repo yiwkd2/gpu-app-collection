@@ -353,9 +353,9 @@ void run(int argc, char** argv)
     cudaMemPrefetchAsync( MatrixPower, sizeof(float)*size, device, stream2);
 #endif
 
-    cudaMakeManagedByDevice(MatrixTemp[0]);
-    cudaMakeManagedByDevice(MatrixTemp[1]);
-    cudaMakeManagedByDevice(MatrixPower);
+    cudaMakeManagedByDevice(MatrixTemp[0], 0);
+    cudaMakeManagedByDevice(MatrixTemp[1], 0);
+    cudaMakeManagedByDevice(MatrixPower, 1);
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
